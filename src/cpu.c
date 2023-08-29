@@ -3,10 +3,109 @@
 
 #include "../includes/cpu.h"
 
+struct {
+    union {
+        struct {
+            uint8_t f;
+            uint8_t a;
+        };
+        uint16_t af;
+    };
+    union {
+        struct {
+            uint8_t c;
+            uint8_t b;
+        };
+        uint16_t bc;
+    };
+    union {
+        struct {
+            uint8_t e;
+            uint8_t d;
+        };
+        uint16_t de;
+    };
+    union {
+        struct {
+            uint8_t l;
+            uint8_t h;
+        };
+        uint16_t hl;
+    };
+    uint16_t sp;
+    uint16_t pc;
+} registers;
+
 typedef struct {
     char *code;
     int8_t operandSize;
+    void (*func)(void);
 } instruction_t;
+
+
+#define REGISTERS_COMBINATION \
+    DEFINE_FUNC(void, a, a) \
+    DEFINE_FUNC(void, a, b) \
+    DEFINE_FUNC(void, a, c) \
+    DEFINE_FUNC(void, a, d) \
+    DEFINE_FUNC(void, a, e) \
+    DEFINE_FUNC(void, a, h) \
+    DEFINE_FUNC(void, a, l) \
+    DEFINE_FUNC(void, b, a) \
+    DEFINE_FUNC(void, b, b) \
+    DEFINE_FUNC(void, b, c) \
+    DEFINE_FUNC(void, b, d) \
+    DEFINE_FUNC(void, b, e) \
+    DEFINE_FUNC(void, b, h) \
+    DEFINE_FUNC(void, b, l) \
+    DEFINE_FUNC(void, c, a) \
+    DEFINE_FUNC(void, c, b) \
+    DEFINE_FUNC(void, c, c) \
+    DEFINE_FUNC(void, c, d) \
+    DEFINE_FUNC(void, c, e) \
+    DEFINE_FUNC(void, c, h) \
+    DEFINE_FUNC(void, c, l) \
+    DEFINE_FUNC(void, d, a) \
+    DEFINE_FUNC(void, d, b) \
+    DEFINE_FUNC(void, d, c) \
+    DEFINE_FUNC(void, d, d) \
+    DEFINE_FUNC(void, d, e) \
+    DEFINE_FUNC(void, d, h) \
+    DEFINE_FUNC(void, d, l) \
+    DEFINE_FUNC(void, e, a) \
+    DEFINE_FUNC(void, e, b) \
+    DEFINE_FUNC(void, e, c) \
+    DEFINE_FUNC(void, e, d) \
+    DEFINE_FUNC(void, e, e) \
+    DEFINE_FUNC(void, e, h) \
+    DEFINE_FUNC(void, e, l) \
+    DEFINE_FUNC(void, h, a) \
+    DEFINE_FUNC(void, h, b) \
+    DEFINE_FUNC(void, h, c) \
+    DEFINE_FUNC(void, h, d) \
+    DEFINE_FUNC(void, h, e) \
+    DEFINE_FUNC(void, h, h) \
+    DEFINE_FUNC(void, h, l) \
+    DEFINE_FUNC(void, l, a) \
+    DEFINE_FUNC(void, l, b) \
+    DEFINE_FUNC(void, l, c) \
+    DEFINE_FUNC(void, l, d) \
+    DEFINE_FUNC(void, l, e) \
+    DEFINE_FUNC(void, l, h) \
+    DEFINE_FUNC(void, l, l) \
+
+
+#define DEFINE_FUNC(ret, reg1, reg2) \
+    ret ld_##reg1##_##reg2 ();
+
+REGISTERS_COMBINATION
+#undef DEFINE_FUNC
+
+#define DEFINE_FUNC(ret, reg1, reg2) \
+    ret add_##reg1##_##reg2 ();
+
+REGISTERS_COMBINATION
+#undef DEFINE_FUNC
 
 const instruction_t instructions[256] = {
     { "NOP", 0},                           // 0x00
@@ -73,54 +172,54 @@ const instruction_t instructions[256] = {
 	{ "DEC A", 0},                       // 0x3d
 	{ "LD A, 0x%02X", 1},               // 0x3e
 	{ "CCF", 0},                           // 0x3f
-	{ "LD B, B", 0},                       // 0x40
-	{ "LD B, C", 0},                    // 0x41
-	{ "LD B, D", 0},                    // 0x42
-	{ "LD B, E", 0},                    // 0x43
-	{ "LD B, H", 0},                    // 0x44
-	{ "LD B, L", 0},                    // 0x45
+	{ "LD B, B", 0, ld_b_b},                       // 0x40
+	{ "LD B, C", 0, ld_b_c},                    // 0x41
+	{ "LD B, D", 0, ld_b_d},                    // 0x42
+	{ "LD B, E", 0, ld_b_e},                    // 0x43
+	{ "LD B, H", 0, ld_b_h},                    // 0x44
+	{ "LD B, L", 0, ld_b_l},                    // 0x45
 	{ "LD B, (HL)", 0},               // 0x46
-	{ "LD B, A", 0},                    // 0x47
-	{ "LD C, B", 0},                    // 0x48
-	{ "LD C, C", 0},                       // 0x49
-	{ "LD C, D", 0},                    // 0x4a
-	{ "LD C, E", 0},                    // 0x4b
-	{ "LD C, H", 0},                    // 0x4c
-	{ "LD C, L", 0},                    // 0x4d
+	{ "LD B, A", 0, ld_b_a},                    // 0x47
+	{ "LD C, B", 0, ld_c_b},                    // 0x48
+	{ "LD C, C", 0, ld_c_c},                       // 0x49
+	{ "LD C, D", 0, ld_c_d},                    // 0x4a
+	{ "LD C, E", 0, ld_c_e},                    // 0x4b
+	{ "LD C, H", 0, ld_c_h},                    // 0x4c
+	{ "LD C, L", 0, ld_c_l},                    // 0x4d
 	{ "LD C, (HL)", 0},               // 0x4e
-	{ "LD C, A", 0},                    // 0x4f
-	{ "LD D, B", 0},                    // 0x50
-	{ "LD D, C", 0},                    // 0x51
-	{ "LD D, D", 0},                       // 0x52
-	{ "LD D, E", 0},                    // 0x53
-	{ "LD D, H", 0},                    // 0x54
-	{ "LD D, L", 0},                    // 0x55
+	{ "LD C, A", 0, ld_c_a},                    // 0x4f
+	{ "LD D, B", 0, ld_d_b},                    // 0x50
+	{ "LD D, C", 0, ld_d_c},                    // 0x51
+	{ "LD D, D", 0, ld_d_d},                       // 0x52
+	{ "LD D, E", 0, ld_d_e},                    // 0x53
+	{ "LD D, H", 0, ld_d_h},                    // 0x54
+	{ "LD D, L", 0, ld_d_l},                    // 0x55
 	{ "LD D, (HL)", 0},               // 0x56
-	{ "LD D, A", 0},                    // 0x57
-	{ "LD E, B", 0},                    // 0x58
-	{ "LD E, C", 0},                    // 0x59
-	{ "LD E, D", 0},                    // 0x5a
-	{ "LD E, E", 0},                       // 0x5b
-	{ "LD E, H", 0},                    // 0x5c
-	{ "LD E, L", 0},                    // 0x5d
+	{ "LD D, A", 0, ld_d_a},                    // 0x57
+	{ "LD E, B", 0, ld_e_b},                    // 0x58
+	{ "LD E, C", 0, ld_e_c},                    // 0x59
+	{ "LD E, D", 0, ld_e_d},                    // 0x5a
+	{ "LD E, E", 0, ld_e_e},                       // 0x5b
+	{ "LD E, H", 0, ld_e_h},                    // 0x5c
+	{ "LD E, L", 0, ld_e_l},                    // 0x5d
 	{ "LD E, (HL)", 0},               // 0x5e
-	{ "LD E, A", 0},                    // 0x5f
-	{ "LD H, B", 0},                    // 0x60
-	{ "LD H, C", 0},                    // 0x61
-	{ "LD H, D", 0},                    // 0x62
-	{ "LD H, E", 0},                    // 0x63
-	{ "LD H, H", 0},                       // 0x64
-	{ "LD H, L", 0},                    // 0x65
+	{ "LD E, A", 0, ld_e_a},                    // 0x5f
+	{ "LD H, B", 0, ld_h_b},                    // 0x60
+	{ "LD H, C", 0, ld_h_c},                    // 0x61
+	{ "LD H, D", 0, ld_h_d},                    // 0x62
+	{ "LD H, E", 0, ld_h_e},                    // 0x63
+	{ "LD H, H", 0, ld_h_h},                       // 0x64
+	{ "LD H, L", 0, ld_h_l},                    // 0x65
 	{ "LD H, (HL)", 0},               // 0x66
-	{ "LD H, A", 0},                    // 0x67
-	{ "LD L, B", 0},                    // 0x68
-	{ "LD L, C", 0},                    // 0x69
-	{ "LD L, D", 0},                    // 0x6a
-	{ "LD L, E", 0},                    // 0x6b
-	{ "LD L, H", 0},                    // 0x6c
-	{ "LD L, L", 0},                       // 0x6d
+	{ "LD H, A", 0, ld_h_a},                    // 0x67
+	{ "LD L, B", 0, ld_l_b},                    // 0x68
+	{ "LD L, C", 0, ld_l_c},                    // 0x69
+	{ "LD L, D", 0, ld_l_d},                    // 0x6a
+	{ "LD L, E", 0, ld_l_e},                    // 0x6b
+	{ "LD L, H", 0, ld_l_h},                    // 0x6c
+	{ "LD L, L", 0, ld_l_l},                       // 0x6d
 	{ "LD L, (HL)", 0},               // 0x6e
-	{ "LD L, A", 0},                    // 0x6f
+	{ "LD L, A", 0, ld_l_a},                    // 0x6f
 	{ "LD (HL), B", 0},               // 0x70
 	{ "LD (HL), C", 0},               // 0x71
 	{ "LD (HL), D", 0},               // 0x72
@@ -129,14 +228,14 @@ const instruction_t instructions[256] = {
 	{ "LD (HL), L", 0},               // 0x75
 	{ "HALT", 0},                         // 0x76
 	{ "LD (HL), A", 0},               // 0x77
-	{ "LD A, B", 0},                    // 0x78
-	{ "LD A, C", 0},                    // 0x79
-	{ "LD A, D", 0},                    // 0x7a
-	{ "LD A, E", 0},                    // 0x7b
-	{ "LD A, H", 0},                    // 0x7c
-	{ "LD A, L", 0},                    // 0x7d
+	{ "LD A, B", 0, ld_a_b},                    // 0x78
+	{ "LD A, C", 0, ld_a_c},                    // 0x79
+	{ "LD A, D", 0, ld_a_d},                    // 0x7a
+	{ "LD A, E", 0, ld_a_e},                    // 0x7b
+	{ "LD A, H", 0, ld_a_h},                    // 0x7c
+	{ "LD A, L", 0, ld_a_l},                    // 0x7d
 	{ "LD A, (HL)", 0},               // 0x7e
-	{ "LD A, A", 0},                       // 0x7f
+	{ "LD A, A", 0, ld_a_a},                       // 0x7f
 	{ "ADD A, B", 0},                  // 0x80
 	{ "ADD A, C", 0},                  // 0x81
 	{ "ADD A, D", 0},                  // 0x82
@@ -267,6 +366,7 @@ const instruction_t instructions[256] = {
 	{ "RST 0x38", 0},
 };
 
+
 char cpuOperandSize(uint8_t opcode) {
     return instructions[opcode].operandSize;
 }
@@ -275,3 +375,17 @@ void cpuPrintInstruction(uint8_t opcode, char operand) {
     fprintf(stdout, instructions[opcode].code, operand);
     fprintf(stdout, "\n");
 }
+
+#define DEFINE_FUNC(ret, reg1, reg2) \
+    ret ld_##reg1##_##reg2 () {\
+        registers.reg1 = registers.reg2;\
+    }
+REGISTERS_COMBINATION
+#undef DEFINE_FUNC
+
+#define DEFINE_FUNC(ret, reg1, reg2) \
+    ret add_##reg1##_##reg2 () {\
+        registers.reg1 += registers.reg2;\
+    }
+REGISTERS_COMBINATION
+#undef DEFINE_FUNC
