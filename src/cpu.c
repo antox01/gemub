@@ -42,15 +42,18 @@ typedef struct {
     void (*func)(void);
 } instruction_t;
 
-
-#define REGISTERS_COMBINATION \
+#define A_COMBINATION \
     DEFINE_FUNC(void, a, a) \
     DEFINE_FUNC(void, a, b) \
     DEFINE_FUNC(void, a, c) \
     DEFINE_FUNC(void, a, d) \
     DEFINE_FUNC(void, a, e) \
     DEFINE_FUNC(void, a, h) \
-    DEFINE_FUNC(void, a, l) \
+    DEFINE_FUNC(void, a, l)
+
+
+#define REGISTERS_COMBINATION \
+    A_COMBINATION \
     DEFINE_FUNC(void, b, a) \
     DEFINE_FUNC(void, b, b) \
     DEFINE_FUNC(void, b, c) \
@@ -95,16 +98,69 @@ typedef struct {
     DEFINE_FUNC(void, l, l) \
 
 
+#define REGISTERS_LIST \
+    DEFINE_FUNC(void, a) \
+    DEFINE_FUNC(void, b) \
+    DEFINE_FUNC(void, c) \
+    DEFINE_FUNC(void, d) \
+    DEFINE_FUNC(void, e) \
+    DEFINE_FUNC(void, h) \
+    DEFINE_FUNC(void, l)
+
+#define DOUBLE_REGISTERS_LIST \
+    DEFINE_FUNC(void, af) \
+    DEFINE_FUNC(void, bc) \
+    DEFINE_FUNC(void, de) \
+    DEFINE_FUNC(void, hl) \
+
+
+/**** LD 2 registers functions definitions ****/
 #define DEFINE_FUNC(ret, reg1, reg2) \
     ret ld_##reg1##_##reg2 ();
 
 REGISTERS_COMBINATION
 #undef DEFINE_FUNC
 
+/**** ADD 2 registers functions definitions ****/
 #define DEFINE_FUNC(ret, reg1, reg2) \
     ret add_##reg1##_##reg2 ();
 
-REGISTERS_COMBINATION
+A_COMBINATION
+#undef DEFINE_FUNC
+
+/**** INC functions definitions ****/
+#define DEFINE_FUNC(ret, reg1) \
+    ret inc_##reg1 ();
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+/**** DEC functions definitions ****/
+#define DEFINE_FUNC(ret, reg1) \
+    ret dec_##reg1 ();
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+/**** AND functions definitions ****/
+#define DEFINE_FUNC(ret, reg1) \
+    ret and_##reg1 ();
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+/**** OR functions definitions ****/
+#define DEFINE_FUNC(ret, reg1) \
+    ret or_##reg1 ();
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+/**** XOR functions definitions ****/
+#define DEFINE_FUNC(ret, reg1) \
+    ret xor_##reg1 ();
+
+REGISTERS_LIST
 #undef DEFINE_FUNC
 
 const instruction_t instructions[256] = {
@@ -236,14 +292,14 @@ const instruction_t instructions[256] = {
 	{ "LD A, L", 0, ld_a_l},                    // 0x7d
 	{ "LD A, (HL)", 0},               // 0x7e
 	{ "LD A, A", 0, ld_a_a},                       // 0x7f
-	{ "ADD A, B", 0},                  // 0x80
-	{ "ADD A, C", 0},                  // 0x81
-	{ "ADD A, D", 0},                  // 0x82
-	{ "ADD A, E", 0},                  // 0x83
-	{ "ADD A, H", 0},                  // 0x84
-	{ "ADD A, L", 0},                  // 0x85
+	{ "ADD A, B", 0, add_a_b},                  // 0x80
+	{ "ADD A, C", 0, add_a_b},                  // 0x81
+	{ "ADD A, D", 0, add_a_b},                  // 0x82
+	{ "ADD A, E", 0, add_a_b},                  // 0x83
+	{ "ADD A, H", 0, add_a_b},                  // 0x84
+	{ "ADD A, L", 0, add_a_b},                  // 0x85
 	{ "ADD A, (HL)", 0},             // 0x86
-	{ "ADD A", 0},                     // 0x87
+	{ "ADD A", 0, add_a_b},                     // 0x87
 	{ "ADC B", 0},                       // 0x88
 	{ "ADC C", 0},                       // 0x89
 	{ "ADC D", 0},                       // 0x8a
@@ -268,30 +324,30 @@ const instruction_t instructions[256] = {
 	{ "SBC L", 0},                       // 0x9d
 	{ "SBC (HL)", 0},                  // 0x9e
 	{ "SBC A", 0},                       // 0x9f
-	{ "AND B", 0},                       // 0xa0
-	{ "AND C", 0},                       // 0xa1
-	{ "AND D", 0},                       // 0xa2
-	{ "AND E", 0},                       // 0xa3
-	{ "AND H", 0},                       // 0xa4
-	{ "AND L", 0},                       // 0xa5
+	{ "AND B", 0, and_b},                       // 0xa0
+	{ "AND C", 0, and_c},                       // 0xa1
+	{ "AND D", 0, and_d},                       // 0xa2
+	{ "AND E", 0, and_e},                       // 0xa3
+	{ "AND H", 0, and_h},                       // 0xa4
+	{ "AND L", 0, and_l},                       // 0xa5
 	{ "AND (HL)", 0},                  // 0xa6
-	{ "AND A", 0},                       // 0xa7
-	{ "XOR B", 0},                       // 0xa8
-	{ "XOR C", 0},                       // 0xa9
-	{ "XOR D", 0},                       // 0xaa
-	{ "XOR E", 0},                       // 0xab
-	{ "XOR H", 0},                       // 0xac
-	{ "XOR L", 0},                       // 0xad
+	{ "AND A", 0, and_a},                       // 0xa7
+	{ "XOR B", 0, xor_b},                       // 0xa8
+	{ "XOR C", 0, xor_c},                       // 0xa9
+	{ "XOR D", 0, xor_d},                       // 0xaa
+	{ "XOR E", 0, xor_e},                       // 0xab
+	{ "XOR H", 0, xor_h},                       // 0xac
+	{ "XOR L", 0, xor_l},                       // 0xad
 	{ "XOR (HL)", 0},                  // 0xae
-	{ "XOR A", 0},                       // 0xaf
-	{ "OR B", 0},                         // 0xb0
-	{ "OR C", 0},                         // 0xb1
-	{ "OR D", 0},                         // 0xb2
-	{ "OR E", 0},                         // 0xb3
-	{ "OR H", 0},                         // 0xb4
-	{ "OR L", 0},                         // 0xb5
+	{ "XOR A", 0, xor_a},                       // 0xaf
+	{ "OR B", 0, or_b},                         // 0xb0
+	{ "OR C", 0, or_c},                         // 0xb1
+	{ "OR D", 0, or_d},                         // 0xb2
+	{ "OR E", 0, or_e},                         // 0xb3
+	{ "OR H", 0, or_h},                         // 0xb4
+	{ "OR L", 0, or_l},                         // 0xb5
 	{ "OR (HL)", 0},                    // 0xb6
-	{ "OR A", 0},                         // 0xb7
+	{ "OR A", 0, or_a},                         // 0xb7
 	{ "CP B", 0},                         // 0xb8
 	{ "CP C", 0},                         // 0xb9
 	{ "CP D", 0},                         // 0xba
@@ -387,5 +443,47 @@ REGISTERS_COMBINATION
     ret add_##reg1##_##reg2 () {\
         registers.reg1 += registers.reg2;\
     }
-REGISTERS_COMBINATION
+A_COMBINATION
+#undef DEFINE_FUNC
+
+#define DEFINE_FUNC(ret, reg1) \
+    ret inc_##reg1 () {\
+        registers.reg1 += 1;\
+    }
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+#define DEFINE_FUNC(ret, reg1) \
+    ret dec_##reg1 () {\
+        registers.reg1 -= 1;\
+    }
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+#define DEFINE_FUNC(ret, reg1) \
+    ret and_##reg1 () {\
+        registers.a &= registers.reg1;\
+    }
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+/**** OR functions definitions ****/
+#define DEFINE_FUNC(ret, reg1) \
+    ret or_##reg1 () {\
+        registers.a |= registers.reg1;\
+    }
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+/**** XOR functions definitions ****/
+#define DEFINE_FUNC(ret, reg1) \
+    ret xor_##reg1 () {\
+        registers.a ^= registers.reg1;\
+    }
+
+REGISTERS_LIST
 #undef DEFINE_FUNC
