@@ -8,8 +8,10 @@ Another Gameboy emulator in C.
     - [ ] ISA implementation
     - [ ] Enabling simulation
 - [ ] Memory
-    - [ ] Load rom from file
+    - [X] Load rom from file
+    - [X] Implementing read operation on ROM
     - [ ] Managing MBC
+    - [ ] Implementing basic memory functionality
 - [ ] Output video
 
 ## Resources
