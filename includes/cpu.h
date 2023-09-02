@@ -1,6 +1,7 @@
 #ifndef CPU_DEF_H
 #define CPU_DEF_H
 
+#include "memory.h"
 enum flag_e {
     FLAG_CARRY = 1 << 4,
     FLAG_HIGH = 1 << 5,
@@ -80,6 +81,21 @@ enum flag_e {
     ret ld_##reg1##_##reg2 ();
 
 REGISTERS_COMBINATION
+DEFINE_FUNC(void, sp, hl)
+#undef DEFINE_FUNC
+
+#define DEFINE_FUNC(ret, reg1) \
+    ret ld_##reg1 (uint8_t value);
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+/**** LD double_registers-immediate functions definitions ****/
+#define DEFINE_FUNC(ret, reg1) \
+    ret ld_##reg1 (uint16_t value);
+
+DOUBLE_REGISTERS_LIST
+DEFINE_FUNC(void, sp)
 #undef DEFINE_FUNC
 
 /**** ADD 2 registers functions definitions ****/
@@ -90,11 +106,32 @@ A_COMBINATION
 DEFINE_FUNC(void, a, a)
 #undef DEFINE_FUNC
 
+#define DEFINE_FUNC(ret, reg1) \
+    ret add_hl_##reg1 ();
+
+DOUBLE_REGISTERS_LIST
+DEFINE_FUNC(void, sp)
+#undef DEFINE_FUNC
+
 #define DEFINE_FUNC(ret, reg1, reg2) \
     ret adc_##reg1##_##reg2 ();
 
 DEFINE_FUNC(void, a, a)
 A_COMBINATION
+#undef DEFINE_FUNC
+
+/**** SUB functions definitions ****/
+#define DEFINE_FUNC(ret, reg1) \
+    ret sub_##reg1 ();
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+/**** SBC functions definitions ****/
+#define DEFINE_FUNC(ret, reg1) \
+    ret sbc_##reg1 ();
+
+REGISTERS_LIST
 #undef DEFINE_FUNC
 
 /**** INC functions definitions ****/
@@ -143,8 +180,36 @@ REGISTERS_LIST
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
+/**** PUSH functions definitions ****/
+#define DEFINE_FUNC(ret, reg1) \
+    ret push_##reg1();
+
+DOUBLE_REGISTERS_LIST
+#undef DEFINE_FUNC
+
+/**** POP functions definitions ****/
+#define DEFINE_FUNC(ret, reg1) \
+    ret pop_##reg1();
+
+DOUBLE_REGISTERS_LIST
+#undef DEFINE_FUNC
+
 void nop(void);
 void cpl(void);
+
+void and_hlp(memory_t memory);
+void or_hlp(memory_t memory);
+void xor_hlp(memory_t memory);
+void cp_hlp(memory_t memory);
+void ld_hl_spn(uint8_t val);
+
+void add_a_hlp (memory_t memory);
+void add_a_val (uint8_t val);
+void adc_a_hlp (memory_t memory);
+void adc_a_val (uint8_t val);
+
+void cp_val(uint8_t val);
+void cp_hlp(memory_t memory);
 
 char cpuOperandSize(unsigned char opcode);
 void cpuPrintInstruction(unsigned char opcode, unsigned short operand);
