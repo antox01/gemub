@@ -3,7 +3,7 @@
 
 #include "../includes/cpu.h"
 
-struct {
+typedef struct {
     union {
         struct {
             uint8_t f; // Flags: ZNHC----
@@ -34,13 +34,18 @@ struct {
     };
     uint16_t sp;
     uint16_t pc;
-} registers;
+} registers_t;
 
 typedef struct {
     char *code;
     int8_t operandSize;
     void *func;
 } instruction_t;
+
+struct cpu_s {
+    registers_t registers;
+    memory_t memory;
+};
 
 
 const instruction_t instructions[256] = {
@@ -114,7 +119,7 @@ const instruction_t instructions[256] = {
 	{ "LD B, E",                    0, ld_b_e},                    // 0x43
 	{ "LD B, H",                    0, ld_b_h},                    // 0x44
 	{ "LD B, L",                    0, ld_b_l},                    // 0x45
-	{ "LD B, (HL)",                 0},               // 0x46
+	{ "LD B, (HL)",                 0, ld_b_hlp},               // 0x46
 	{ "LD B, A",                    0, ld_b_a},                    // 0x47
 	{ "LD C, B",                    0, ld_c_b},                    // 0x48
 	{ "LD C, C",                    0, nop},                       // 0x49
@@ -122,7 +127,7 @@ const instruction_t instructions[256] = {
 	{ "LD C, E",                    0, ld_c_e},                    // 0x4b
 	{ "LD C, H",                    0, ld_c_h},                    // 0x4c
 	{ "LD C, L",                    0, ld_c_l},                    // 0x4d
-	{ "LD C, (HL)",                 0},               // 0x4e
+	{ "LD C, (HL)",                 0, ld_c_hlp},               // 0x4e
 	{ "LD C, A",                    0, ld_c_a},                    // 0x4f
 	{ "LD D, B",                    0, ld_d_b},                    // 0x50
 	{ "LD D, C",                    0, ld_d_c},                    // 0x51
@@ -130,7 +135,7 @@ const instruction_t instructions[256] = {
 	{ "LD D, E",                    0, ld_d_e},                    // 0x53
 	{ "LD D, H",                    0, ld_d_h},                    // 0x54
 	{ "LD D, L",                    0, ld_d_l},                    // 0x55
-	{ "LD D, (HL)",                 0},               // 0x56
+	{ "LD D, (HL)",                 0, ld_d_hlp},               // 0x56
 	{ "LD D, A",                    0, ld_d_a},                    // 0x57
 	{ "LD E, B",                    0, ld_e_b},                    // 0x58
 	{ "LD E, C",                    0, ld_e_c},                    // 0x59
@@ -138,7 +143,7 @@ const instruction_t instructions[256] = {
 	{ "LD E, E",                    0, nop},                       // 0x5b
 	{ "LD E, H",                    0, ld_e_h},                    // 0x5c
 	{ "LD E, L",                    0, ld_e_l},                    // 0x5d
-	{ "LD E, (HL)",                 0},               // 0x5e
+	{ "LD E, (HL)",                 0, ld_e_hlp},               // 0x5e
 	{ "LD E, A",                    0, ld_e_a},                    // 0x5f
 	{ "LD H, B",                    0, ld_h_b},                    // 0x60
 	{ "LD H, C",                    0, ld_h_c},                    // 0x61
@@ -146,7 +151,7 @@ const instruction_t instructions[256] = {
 	{ "LD H, E",                    0, ld_h_e},                    // 0x63
 	{ "LD H, H",                    0, nop},                       // 0x64
 	{ "LD H, L",                    0, ld_h_l},                    // 0x65
-	{ "LD H, (HL)",                 0},               // 0x66
+	{ "LD H, (HL)",                 0, ld_h_hlp},               // 0x66
 	{ "LD H, A",                    0, ld_h_a},                    // 0x67
 	{ "LD L, B",                    0, ld_l_b},                    // 0x68
 	{ "LD L, C",                    0, ld_l_c},                    // 0x69
@@ -154,23 +159,23 @@ const instruction_t instructions[256] = {
 	{ "LD L, E",                    0, ld_l_e},                    // 0x6b
 	{ "LD L, H",                    0, ld_l_h},                    // 0x6c
 	{ "LD L, L",                    0, nop},                       // 0x6d
-	{ "LD L, (HL)",                 0},               // 0x6e
+	{ "LD L, (HL)",                 0, ld_l_hlp},               // 0x6e
 	{ "LD L, A",                    0, ld_l_a},                    // 0x6f
-	{ "LD (HL), B",                 0},               // 0x70
-	{ "LD (HL), C",                 0},               // 0x71
-	{ "LD (HL), D",                 0},               // 0x72
-	{ "LD (HL), E",                 0},               // 0x73
-	{ "LD (HL), H",                 0},               // 0x74
-	{ "LD (HL), L",                 0},               // 0x75
+	{ "LD (HL), B",                 0, ld_hlp_b},               // 0x70
+	{ "LD (HL), C",                 0, ld_hlp_c},               // 0x71
+	{ "LD (HL), D",                 0, ld_hlp_d},               // 0x72
+	{ "LD (HL), E",                 0, ld_hlp_e},               // 0x73
+	{ "LD (HL), H",                 0, ld_hlp_h},               // 0x74
+	{ "LD (HL), L",                 0, ld_hlp_l},               // 0x75
 	{ "HALT",                       0},               // 0x76
-	{ "LD (HL), A",                 0},               // 0x77
+	{ "LD (HL), A",                 0, ld_hlp_a},               // 0x77
 	{ "LD A, B",                    0, ld_a_b},                    // 0x78
 	{ "LD A, C",                    0, ld_a_c},                    // 0x79
 	{ "LD A, D",                    0, ld_a_d},                    // 0x7a
 	{ "LD A, E",                    0, ld_a_e},                    // 0x7b
 	{ "LD A, H",                    0, ld_a_h},                    // 0x7c
 	{ "LD A, L",                    0, ld_a_l},                    // 0x7d
-	{ "LD A, (HL)",                 0},               // 0x7e
+	{ "LD A, (HL)",                 0, ld_a_hlp},               // 0x7e
 	{ "LD A, A",                    0, nop},                       // 0x7f
 	{ "ADD A, B",                   0, add_a_b},                  // 0x80
 	{ "ADD A, C",                   0, add_a_b},                  // 0x81
@@ -312,74 +317,91 @@ void cpuPrintInstruction(uint8_t opcode, uint16_t operand) {
     fprintf(stdout, "\n");
 }
 
-uint8_t add8(uint8_t reg1, uint8_t reg2) {
+uint8_t add8(registers_t *registers, uint8_t reg1, uint8_t reg2) {
         uint16_t sum = reg1 + reg2;
-        if((uint8_t)sum == 0) FLAG_SET(registers.f, FLAG_ZERO);/* Set the Z flag */
-        else FLAG_CLEAR(registers.f, FLAG_ZERO);
+        if((uint8_t)sum == 0) FLAG_SET(registers->f, FLAG_ZERO);/* Set the Z flag */
+        else FLAG_CLEAR(registers->f, FLAG_ZERO);
 
-        FLAG_CLEAR(registers.f, FLAG_SUB);/* Reset the N flag */
+        FLAG_CLEAR(registers->f, FLAG_SUB);/* Reset the N flag */
         if((reg1 & 0x0f) + (reg2 & 0x0f) > 0x0f)
-            FLAG_SET(registers.f, FLAG_HIGH);/* Set the H flag */
+            FLAG_SET(registers->f, FLAG_HIGH);/* Set the H flag */
         else
-            FLAG_CLEAR(registers.f, FLAG_HIGH);
+            FLAG_CLEAR(registers->f, FLAG_HIGH);
         if((sum & 0xff00))
-            FLAG_SET(registers.f, FLAG_CARRY);/* Set the C flag */
+            FLAG_SET(registers->f, FLAG_CARRY);/* Set the C flag */
         else
-            FLAG_SET(registers.f, FLAG_CARRY);
+            FLAG_SET(registers->f, FLAG_CARRY);
         return sum;
 }
 
-uint16_t add16(uint16_t reg1, uint16_t reg2) {
+uint16_t add16(registers_t *registers, uint16_t reg1, uint16_t reg2) {
         uint32_t sum = reg1 + reg2;
 
-        FLAG_CLEAR(registers.f, FLAG_SUB);/* Reset the N flag */
+        FLAG_CLEAR(registers->f, FLAG_SUB);/* Reset the N flag */
         if((reg1 & 0x7ff) + (reg2 & 0x7ff) > 0x7ff)
-            FLAG_SET(registers.f, FLAG_HIGH);/* Set the H flag */
+            FLAG_SET(registers->f, FLAG_HIGH);/* Set the H flag */
         else
-         FLAG_CLEAR(registers.f, FLAG_HIGH);
+         FLAG_CLEAR(registers->f, FLAG_HIGH);
         if((sum & 0xffff0000))
-            FLAG_SET(registers.f, FLAG_CARRY);/* Set the C flag */
+            FLAG_SET(registers->f, FLAG_CARRY);/* Set the C flag */
         else
-            FLAG_CLEAR(registers.f, FLAG_CARRY);/* Set the C flag */
+            FLAG_CLEAR(registers->f, FLAG_CARRY);/* Set the C flag */
         return sum;
 }
 
-uint8_t sub(uint8_t reg1, uint8_t reg2) {
+uint8_t sub(registers_t *registers, uint8_t reg1, uint8_t reg2) {
         uint16_t res = reg1 - reg2;
-        if((uint8_t)res == 0) FLAG_SET(registers.f, FLAG_ZERO);/* Set the Z flag */
-        else FLAG_CLEAR(registers.f, FLAG_ZERO);
+        if((uint8_t)res == 0) FLAG_SET(registers->f, FLAG_ZERO);/* Set the Z flag */
+        else FLAG_CLEAR(registers->f, FLAG_ZERO);
 
-        FLAG_CLEAR(registers.f, FLAG_SUB);/* Reset the N flag */
+        FLAG_CLEAR(registers->f, FLAG_SUB);/* Reset the N flag */
         if((reg1 & 0x0f) < (reg2 & 0x0f))
-            FLAG_SET(registers.f, FLAG_HIGH);/* Set the H flag */
+            FLAG_SET(registers->f, FLAG_HIGH);/* Set the H flag */
         else
-            FLAG_CLEAR(registers.f, FLAG_HIGH);
+            FLAG_CLEAR(registers->f, FLAG_HIGH);
         if(reg1 < reg2)
-            FLAG_SET(registers.f, FLAG_CARRY);/* Set the C flag */
+            FLAG_SET(registers->f, FLAG_CARRY);/* Set the C flag */
         else
-            FLAG_SET(registers.f, FLAG_CARRY);
+            FLAG_SET(registers->f, FLAG_CARRY);
         return res;
 }
 
 #define DEFINE_FUNC(ret, reg1, reg2) \
-    ret ld_##reg1##_##reg2 () {\
-        registers.reg1 = registers.reg2;\
+    ret ld_##reg1##_##reg2 (cpu_t cpu) {\
+        cpu->registers.reg1 = cpu->registers.reg2;\
     }
 REGISTERS_COMBINATION
 DEFINE_FUNC(void, sp, hl)
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1) \
-    ret ld_##reg1 (uint8_t value) {\
-        registers.reg1 = value;\
+    ret ld_##reg1##_hlp (cpu_t cpu) {\
+        uint8_t value = memoryReadByte(cpu->memory, cpu->registers.hl);\
+        cpu->registers.reg1 = value;\
     }
 
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1) \
-    ret ld_##reg1 (uint16_t value) {\
-        registers.reg1 = value;\
+    ret ld_hlp_##reg1 (cpu_t cpu) {\
+        memoryWriteByte(cpu->memory, cpu->registers.hl, cpu->registers.reg1);\
+    }
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+#define DEFINE_FUNC(ret, reg1) \
+    ret ld_##reg1 (cpu_t cpu, uint8_t value) {\
+        cpu->registers.reg1 = value;\
+    }
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+#define DEFINE_FUNC(ret, reg1) \
+    ret ld_##reg1 (cpu_t cpu, uint16_t value) {\
+        cpu->registers.reg1 = value;\
     }
 
 DOUBLE_REGISTERS_LIST
@@ -387,66 +409,53 @@ DEFINE_FUNC(void, sp)
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1, reg2) \
-    ret add_##reg1##_##reg2 () {\
-        registers.reg1 = add8(registers.reg1, registers.reg2);\
+    ret add_##reg1##_##reg2 (cpu_t cpu) {\
+        cpu->registers.reg1 = add8(&(cpu->registers), cpu->registers.reg1, cpu->registers.reg2);\
     }
 A_COMBINATION
 DEFINE_FUNC(void, a, a)
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1) \
-    ret add_hl_##reg1 () {\
-        registers.hl = add16(registers.hl, registers.reg1);\
+    ret add_hl_##reg1 (cpu_t cpu) {\
+        cpu->registers.hl = add16(&cpu->registers, cpu->registers.hl, cpu->registers.reg1);\
     }
 DOUBLE_REGISTERS_LIST
 DEFINE_FUNC(void, sp)
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1, reg2) \
-    ret adc_##reg1##_##reg2 () {\
-        uint8_t carry = (registers.f & 1<<4) >> 4;\
-        registers.reg1 = add8(registers.reg1, registers.reg2 + carry);\
+    ret adc_##reg1##_##reg2 (cpu_t cpu) {\
+        uint8_t carry = (cpu->registers.f & 1<<4) >> 4;\
+        cpu->registers.reg1 = add8(&cpu->registers, cpu->registers.reg1, cpu->registers.reg2 + carry);\
     }
 A_COMBINATION
 DEFINE_FUNC(void, a, a)
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1) \
-    ret sub_##reg1 () {\
-        registers.a = sub(registers.a, registers.reg1);\
+    ret sub_##reg1 (cpu_t cpu) {\
+        cpu->registers.a = sub(&cpu->registers, cpu->registers.a, cpu->registers.reg1);\
     }
 
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1) \
-    ret sbc_##reg1 () {\
-        uint8_t carry = (registers.f & 1<<4) >> 4;\
-        registers.a = sub(registers.a, registers.reg1 + carry);\
+    ret sbc_##reg1 (cpu_t cpu) {\
+        uint8_t carry = (cpu->registers.f & 1<<4) >> 4;\
+        cpu->registers.a = sub(&cpu->registers, cpu->registers.a, cpu->registers.reg1 + carry);\
     }
 
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1) \
-    ret inc_##reg1 () {\
-        registers.reg1 += 1;\
-        if(registers.reg1 == 0) FLAG_SET(registers.f, FLAG_ZERO);/* Set the Z flag */\
-        FLAG_CLEAR(registers.f, FLAG_SUB);/* Reset the N flag */\
-        if((registers.reg1 & 0x0f) == 0) FLAG_SET(registers.f, FLAG_HIGH);/* Set the H flag */\
-    }
-
-REGISTERS_LIST
-DOUBLE_REGISTERS_LIST
-DEFINE_FUNC(void, sp)
-#undef DEFINE_FUNC
-
-#define DEFINE_FUNC(ret, reg1) \
-    ret dec_##reg1 () {\
-        if((registers.reg1 & 0xf) == 0) FLAG_SET(registers.f, FLAG_HIGH);\
-        registers.reg1 -= 1;\
-        if(registers.reg1 == 0) FLAG_SET(registers.f, FLAG_ZERO);\
-        FLAG_SET(registers.f, FLAG_SUB);\
+    ret inc_##reg1 (cpu_t cpu) {\
+        cpu->registers.reg1 += 1;\
+        if(cpu->registers.reg1 == 0) FLAG_SET(cpu->registers.f, FLAG_ZERO);/* Set the Z flag */\
+        FLAG_CLEAR(cpu->registers.f, FLAG_SUB);/* Reset the N flag */\
+        if((cpu->registers.reg1 & 0x0f) == 0) FLAG_SET(cpu->registers.f, FLAG_HIGH);/* Set the H flag */\
     }
 
 REGISTERS_LIST
@@ -455,8 +464,21 @@ DEFINE_FUNC(void, sp)
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1) \
-    ret and_##reg1 () {\
-        registers.a &= registers.reg1;\
+    ret dec_##reg1 (cpu_t cpu) {\
+        if((cpu->registers.reg1 & 0xf) == 0) FLAG_SET(cpu->registers.f, FLAG_HIGH);\
+        cpu->registers.reg1 -= 1;\
+        if(cpu->registers.reg1 == 0) FLAG_SET(cpu->registers.f, FLAG_ZERO);\
+        FLAG_SET(cpu->registers.f, FLAG_SUB);\
+    }
+
+REGISTERS_LIST
+DOUBLE_REGISTERS_LIST
+DEFINE_FUNC(void, sp)
+#undef DEFINE_FUNC
+
+#define DEFINE_FUNC(ret, reg1) \
+    ret and_##reg1 (cpu_t cpu) {\
+        cpu->registers.a &= cpu->registers.reg1;\
     }
 
 REGISTERS_LIST
@@ -464,8 +486,8 @@ REGISTERS_LIST
 
 /**** OR functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret or_##reg1 () {\
-        registers.a |= registers.reg1;\
+    ret or_##reg1 (cpu_t cpu) {\
+        cpu->registers.a |= cpu->registers.reg1;\
     }
 
 REGISTERS_LIST
@@ -473,71 +495,71 @@ REGISTERS_LIST
 
 /**** XOR functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret xor_##reg1 () {\
-        registers.a ^= registers.reg1;\
+    ret xor_##reg1 (cpu_t cpu) {\
+        cpu->registers.a ^= cpu->registers.reg1;\
     }
 
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1) \
-    ret cp_##reg1() {\
-        sub(registers.a, registers.reg1);\
+    ret cp_##reg1(cpu_t cpu) {\
+        sub(&cpu->registers, cpu->registers.a, cpu->registers.reg1);\
     }
 
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
-void nop(void) { }
+void nop(cpu_t cpu) { }
 
-void cpl(void) {
-    registers.a = ~registers.a;
+void cpl(cpu_t cpu) {
+    cpu->registers.a = ~cpu->registers.a;
 }
 
-void and_hlp(memory_t memory) {
-    uint8_t val = memoryReadByte(memory, registers.hl);
-    registers.a &= val;
+void and_hlp(cpu_t cpu) {
+    uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
+    cpu->registers.a &= val;
 }
 
-void or_hlp(memory_t memory) {
-    uint8_t val = memoryReadByte(memory, registers.hl);
-    registers.a |= val;
+void or_hlp(cpu_t cpu) {
+    uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
+    cpu->registers.a |= val;
 }
 
-void xor_hlp(memory_t memory) {
-    uint8_t val = memoryReadByte(memory, registers.hl);
-    registers.a ^= val;
+void xor_hlp(cpu_t cpu) {
+    uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
+    cpu->registers.a ^= val;
 }
 
-void cp_hlp(memory_t memory) {
-    uint8_t val = memoryReadByte(memory, registers.hl);
-    sub(registers.a, val);
+void cp_hlp(cpu_t cpu) {
+    uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
+    sub(&cpu->registers, cpu->registers.a, val);
 }
 
-void cp_val(uint8_t val) {
-    sub(registers.a, val);
+void cp_val(cpu_t cpu, uint8_t val) {
+    sub(&cpu->registers, cpu->registers.a, val);
 }
 
-void ld_hl_spn(uint8_t val) {
-    registers.hl = registers.sp + val;
+void ld_hl_spn(cpu_t cpu, uint8_t val) {
+    cpu->registers.hl = cpu->registers.sp + val;
 }
 
-void add_a_hlp (memory_t memory) {
-    uint8_t val = memoryReadByte(memory, registers.hl);
-    registers.a = add8(registers.a, val);
+void add_a_hlp (cpu_t cpu) {
+    uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
+    cpu->registers.a = add8(&cpu->registers, cpu->registers.a, val);
 }
 
-void add_a_val (uint8_t val) {
-    registers.a = add8(registers.a, val);
+void add_a_val (cpu_t cpu, uint8_t val) {
+    cpu->registers.a = add8(&cpu->registers, cpu->registers.a, val);
 }
 
-void adc_a_hlp (memory_t memory) {
-    uint8_t carry = (registers.f & 1<<4) >> 4;
-    uint8_t val = memoryReadByte(memory, registers.hl);
-    registers.a = add8(registers.a, val + carry);
+void adc_a_hlp (cpu_t cpu) {
+    uint8_t carry = (cpu->registers.f & 1<<4) >> 4;
+    uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
+    cpu->registers.a = add8(&cpu->registers, cpu->registers.a, val + carry);
 }
 
-void adc_a_val (uint8_t val) {
-    uint8_t carry = (registers.f & 1<<4) >> 4;
-    registers.a = add8(registers.a, val + carry);
+void adc_a_val (cpu_t cpu, uint8_t val) {
+    uint8_t carry = (cpu->registers.f & 1<<4) >> 4;
+    cpu->registers.a = add8(&cpu->registers, cpu->registers.a, val + carry);
 }

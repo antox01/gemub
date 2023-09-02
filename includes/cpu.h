@@ -9,6 +9,8 @@ enum flag_e {
     FLAG_ZERO = 1<<7
 };
 
+typedef struct cpu_s *cpu_t;
+
 #define FLAG_SET(f, x) f |= x
 #define FLAG_CLEAR(f, x) f &= ~(x)
 
@@ -78,21 +80,33 @@ enum flag_e {
 
 /**** LD 2 registers functions definitions ****/
 #define DEFINE_FUNC(ret, reg1, reg2) \
-    ret ld_##reg1##_##reg2 ();
+    ret ld_##reg1##_##reg2 (cpu_t cpu);
 
 REGISTERS_COMBINATION
 DEFINE_FUNC(void, sp, hl)
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1) \
-    ret ld_##reg1 (uint8_t value);
+    ret ld_##reg1##_hlp (cpu_t cpu);
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+#define DEFINE_FUNC(ret, reg1) \
+    ret ld_hlp_##reg1 (cpu_t cpu);
+
+REGISTERS_LIST
+#undef DEFINE_FUNC
+
+#define DEFINE_FUNC(ret, reg1) \
+    ret ld_##reg1 (cpu_t cpu, uint8_t value);
 
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
 /**** LD double_registers-immediate functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret ld_##reg1 (uint16_t value);
+    ret ld_##reg1 (cpu_t cpu, uint16_t value);
 
 DOUBLE_REGISTERS_LIST
 DEFINE_FUNC(void, sp)
@@ -100,21 +114,21 @@ DEFINE_FUNC(void, sp)
 
 /**** ADD 2 registers functions definitions ****/
 #define DEFINE_FUNC(ret, reg1, reg2) \
-    ret add_##reg1##_##reg2 ();
+    ret add_##reg1##_##reg2 (cpu_t cpu);
 
 A_COMBINATION
 DEFINE_FUNC(void, a, a)
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1) \
-    ret add_hl_##reg1 ();
+    ret add_hl_##reg1 (cpu_t cpu);
 
 DOUBLE_REGISTERS_LIST
 DEFINE_FUNC(void, sp)
 #undef DEFINE_FUNC
 
 #define DEFINE_FUNC(ret, reg1, reg2) \
-    ret adc_##reg1##_##reg2 ();
+    ret adc_##reg1##_##reg2 (cpu_t cpu);
 
 DEFINE_FUNC(void, a, a)
 A_COMBINATION
@@ -122,21 +136,21 @@ A_COMBINATION
 
 /**** SUB functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret sub_##reg1 ();
+    ret sub_##reg1 (cpu_t cpu);
 
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
 /**** SBC functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret sbc_##reg1 ();
+    ret sbc_##reg1 (cpu_t cpu);
 
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
 /**** INC functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret inc_##reg1 ();
+    ret inc_##reg1 (cpu_t cpu);
 
 REGISTERS_LIST
 DOUBLE_REGISTERS_LIST
@@ -145,7 +159,7 @@ DEFINE_FUNC(void, sp)
 
 /**** DEC functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret dec_##reg1 ();
+    ret dec_##reg1 (cpu_t cpu);
 
 REGISTERS_LIST
 DOUBLE_REGISTERS_LIST
@@ -154,63 +168,64 @@ DEFINE_FUNC(void, sp)
 
 /**** AND functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret and_##reg1 ();
+    ret and_##reg1 (cpu_t cpu);
 
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
 /**** OR functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret or_##reg1 ();
+    ret or_##reg1 (cpu_t cpu);
 
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
 /**** XOR functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret xor_##reg1 ();
+    ret xor_##reg1 (cpu_t cpu);
 
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
 /**** CP functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret cp_##reg1();
+    ret cp_##reg1(cpu_t cpu);
 
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
 /**** PUSH functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret push_##reg1();
+    ret push_##reg1(cpu_t cpu);
 
 DOUBLE_REGISTERS_LIST
 #undef DEFINE_FUNC
 
 /**** POP functions definitions ****/
 #define DEFINE_FUNC(ret, reg1) \
-    ret pop_##reg1();
+    ret pop_##reg1(cpu_t cpu);
 
 DOUBLE_REGISTERS_LIST
 #undef DEFINE_FUNC
 
-void nop(void);
-void cpl(void);
+void nop(cpu_t cpu);
+void cpl(cpu_t cpu);
 
-void and_hlp(memory_t memory);
-void or_hlp(memory_t memory);
-void xor_hlp(memory_t memory);
-void cp_hlp(memory_t memory);
-void ld_hl_spn(uint8_t val);
+void and_hlp(cpu_t cpu);
+void or_hlp(cpu_t cpu);
+void xor_hlp(cpu_t cpu);
+void cp_hlp(cpu_t cpu);
+void ld_hl_spn(cpu_t cpu, uint8_t val);
 
-void add_a_hlp (memory_t memory);
-void add_a_val (uint8_t val);
-void adc_a_hlp (memory_t memory);
-void adc_a_val (uint8_t val);
+void add_a_hlp (cpu_t cpu);
+void add_a_val (cpu_t cpu, uint8_t val);
+void adc_a_hlp (cpu_t cpu);
+void adc_a_val (cpu_t cpu, uint8_t val);
 
-void cp_val(uint8_t val);
-void cp_hlp(memory_t memory);
+void cp_val(cpu_t cpu, uint8_t val);
+void cp_hlp(cpu_t cpu);
 
+cpu_t initCpu(memory_t memory);
 char cpuOperandSize(unsigned char opcode);
 void cpuPrintInstruction(unsigned char opcode, unsigned short operand);
 
