@@ -13,7 +13,7 @@ typedef struct cpu_s *cpu_t;
 
 #define FLAG_SET(f, x) f |= x
 #define FLAG_CLEAR(f, x) f &= ~(x)
-#define isSetFlag(f, x) f & x
+#define isSetFlag(f, x) ((f & x) != 0)
 
 #define RST_ADDRESSES \
     DEFINE_FUNC(void, 0x00) \
@@ -216,6 +216,7 @@ REGISTERS_LIST
     ret push_##reg1(cpu_t cpu);
 
 DOUBLE_REGISTERS_LIST
+DEFINE_FUNC(void, af)
 #undef DEFINE_FUNC
 
 /**** POP functions definitions ****/
@@ -223,6 +224,7 @@ DOUBLE_REGISTERS_LIST
     ret pop_##reg1(cpu_t cpu);
 
 DOUBLE_REGISTERS_LIST
+DEFINE_FUNC(void, af)
 #undef DEFINE_FUNC
 
 void nop(cpu_t cpu);
@@ -239,9 +241,15 @@ void ld_add_sp(cpu_t cpu, uint16_t address);
 void ld_a_dep(cpu_t cpu);
 void ld_dep_a(cpu_t cpu);
 void ld_a_bcp(cpu_t cpu);
+void ld_a_add16(cpu_t cpu, uint16_t address);
+void ld_add16_a(cpu_t cpu, uint16_t address);
+void ld_a_add8(cpu_t cpu, uint8_t address);
+void ld_add8_a(cpu_t cpu, uint8_t address);
 void ld_bcp_a(cpu_t cpu);
 void ld_hl_spn(cpu_t cpu, uint8_t val);
 void ld_hlp_val(cpu_t cpu, uint8_t val);
+void ld_cp_a(cpu_t cpu);
+void ld_a_cp(cpu_t cpu);
 
 void ldi_hlp_a(cpu_t cpu);
 void ldi_a_hlp(cpu_t cpu);
@@ -256,6 +264,7 @@ void adc_a_val (cpu_t cpu, uint8_t val);
 void sub_hlp(cpu_t cpu);
 void sbc_hlp(cpu_t cpu);
 void sub_val(cpu_t cpu, uint8_t val);
+void sbc_val(cpu_t cpu, uint8_t val);
 
 void cp_val(cpu_t cpu, uint8_t val);
 void cp_hlp(cpu_t cpu);
@@ -265,6 +274,30 @@ void dec_hlp(cpu_t cpu);
 
 void ccf(cpu_t cpu);
 void scf(cpu_t cpu);
+
+void jr_val(cpu_t cpu, uint8_t val);
+void jr_c_val(cpu_t cpu, uint8_t val);
+void jr_nc_val(cpu_t cpu, uint8_t val);
+void jr_z_val(cpu_t cpu, uint8_t val);
+void jr_nz_val(cpu_t cpu, uint8_t val);
+
+void jp_val(cpu_t cpu, uint16_t val);
+void jp_hl(cpu_t cpu);
+void jp_c_val(cpu_t cpu, uint16_t val);
+void jp_nc_val(cpu_t cpu, uint16_t val);
+void jp_z_val(cpu_t cpu, uint16_t val);
+void jp_nz_val(cpu_t cpu, uint16_t val);
+
+void call_val(cpu_t cpu, uint16_t val);
+void call_c_val(cpu_t cpu, uint16_t val);
+void call_nc_val(cpu_t cpu, uint16_t val);
+void call_z_val(cpu_t cpu, uint16_t val);
+void call_nz_val(cpu_t cpu, uint16_t val);
+
+void rla(cpu_t cpu);
+void rlca(cpu_t cpu);
+void rra(cpu_t cpu);
+void rrca(cpu_t cpu);
 
 void unknown(cpu_t cpu);
 

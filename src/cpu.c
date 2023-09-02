@@ -57,7 +57,7 @@ const instruction_t instructions[256] = {
 	{ "INC B",                      0, inc_b},                       // 0x04
 	{ "DEC B",                      0, dec_b},                       // 0x05
 	{ "LD B, 0x%02X",               1, ld_b},               // 0x06
-	{ "RLCA",                       0},                         // 0x07
+	{ "RLCA",                       0, rlca},                         // 0x07
 	{ "LD (0x%04X), SP",            2, ld_add_sp},         // 0x08
 	{ "ADD HL, BC",                 0, add_hl_bc},              // 0x09
 	{ "LD A, (BC)",                 0, ld_a_bcp},               // 0x0a
@@ -65,32 +65,32 @@ const instruction_t instructions[256] = {
 	{ "INC C",                      0, inc_c},                       // 0x0c
 	{ "DEC C",                      0, dec_c},                       // 0x0d
 	{ "LD C, 0x%02X",               1, ld_c},               // 0x0e
-	{ "RRCA",                       0},                         // 0x0f
-	{ "STOP",                       1},                         // 0x10
+	{ "RRCA",                       0, rrca},                         // 0x0f
+	{ "STOP",                       1, NULL},                         // 0x10
 	{ "LD DE, 0x%04X",              2, ld_de},            // 0x11
 	{ "LD (DE), A",                 0, ld_dep_a},               // 0x12
 	{ "INC DE",                     0, inc_de},                     // 0x13
 	{ "INC D",                      0, inc_d},                       // 0x14
 	{ "DEC D",                      0, dec_d},                       // 0x15
 	{ "LD D, 0x%02X",               1, ld_d},               // 0x16
-	{ "RLA",                        0},                           // 0x17
-	{ "JR 0x%02X",                  1},                    // 0x18
+	{ "RLA",                        0, rla},                           // 0x17
+	{ "JR 0x%02X",                  1, jr_val},                    // 0x18
 	{ "ADD HL, DE",                 0, add_hl_de},              // 0x19
 	{ "LD A, (DE)",                 0, ld_a_dep},               // 0x1a
 	{ "DEC DE",                     0, dec_de},                     // 0x1b
 	{ "INC E",                      0, inc_e},                       // 0x1c
 	{ "DEC E",                      0, dec_e},                       // 0x1d
 	{ "LD E, 0x%02X",               1, ld_e},               // 0x1e
-	{ "RRA",                        0},                           // 0x1f
-	{ "JR NZ, 0x%02X",              1},             // 0x20
+	{ "RRA",                        0, rra},                           // 0x1f
+	{ "JR NZ, 0x%02X",              1, jr_nz_val},             // 0x20
 	{ "LD HL, 0x%04X",              2, ld_hl},            // 0x21
 	{ "LDI (HL), A",                0, ldi_hlp_a},             // 0x22
 	{ "INC HL",                     0, inc_hl},                     // 0x23
 	{ "INC H",                      0, inc_h},                       // 0x24
 	{ "DEC H",                      0, dec_h},                       // 0x25
 	{ "LD H, 0x%02X",               1, ld_h},               // 0x26
-	{ "DAA",                        0},                           // 0x27
-	{ "JR Z, 0x%02X",               1},               // 0x28
+	{ "DAA",                        0, NULL},                           // 0x27
+	{ "JR Z, 0x%02X",               1, jr_z_val},               // 0x28
 	{ "ADD HL, HL",                 0, add_hl_hl},              // 0x29
 	{ "LDI A, (HL)",                0, ldi_a_hlp},             // 0x2a
 	{ "DEC HL",                     0, dec_hl},                     // 0x2b
@@ -98,7 +98,7 @@ const instruction_t instructions[256] = {
 	{ "DEC L",                      0, dec_l},                       // 0x2d
 	{ "LD L, 0x%02X",               1, ld_l},               // 0x2e
 	{ "CPL",                        0, cpl},                           // 0x2f
-	{ "JR NC, 0x%02X",              1},             // 0x30
+	{ "JR NC, 0x%02X",              1, jr_nc_val},             // 0x30
 	{ "LD SP, 0x%04X",              2, ld_sp},            // 0x31
 	{ "LDD (HL), A",                0, ldd_hlp_a},             // 0x32
 	{ "INC SP",                     0, inc_sp},                     // 0x33
@@ -106,7 +106,7 @@ const instruction_t instructions[256] = {
 	{ "DEC (HL)",                   0, dec_hlp},                  // 0x35
 	{ "LD (HL), 0x%02X",            1, ld_hlp_val},          // 0x36
 	{ "SCF",                        0, scf},                           // 0x37
-	{ "JR C, 0x%02X",               1},               // 0x38
+	{ "JR C, 0x%02X",               1, jr_c_val},               // 0x38
 	{ "ADD HL, SP",                 0, add_hl_sp},              // 0x39
 	{ "LDD A, (HL)",                0, ldd_a_hlp},             // 0x3a
 	{ "DEC SP",                     0, dec_sp},                     // 0x3b
@@ -168,7 +168,7 @@ const instruction_t instructions[256] = {
 	{ "LD (HL), E",                 0, ld_hlp_e},               // 0x73
 	{ "LD (HL), H",                 0, ld_hlp_h},               // 0x74
 	{ "LD (HL), L",                 0, ld_hlp_l},               // 0x75
-	{ "HALT",                       0},               // 0x76
+	{ "HALT",                       0, NULL},               // 0x76
 	{ "LD (HL), A",                 0, ld_hlp_a},               // 0x77
 	{ "LD A, B",                    0, ld_a_b},                    // 0x78
 	{ "LD A, C",                    0, ld_a_c},                    // 0x79
@@ -242,66 +242,66 @@ const instruction_t instructions[256] = {
 	{ "CP L",                       0, cp_l},                         // 0xbd
 	{ "CP (HL)",                    0, cp_hlp},                    // 0xbe
 	{ "CP A",                       0, cp_a},                         // 0xbf
-	{ "RET NZ",                     0},                     // 0xc0
-	{ "POP BC",                     0},                     // 0xc1
-	{ "JP NZ, 0x%04X",              2},            // 0xc2
-	{ "JP 0x%04X",                  2},                   // 0xc3
-	{ "CALL NZ, 0x%04X",            2},        // 0xc4
-	{ "PUSH BC",                    0},                   // 0xc5
+	{ "RET NZ",                     0, NULL},                     // 0xc0
+	{ "POP BC",                     0, pop_bc},                     // 0xc1
+	{ "JP NZ, 0x%04X",              2, jp_nz_val},            // 0xc2
+	{ "JP 0x%04X",                  2, jp_val},                   // 0xc3
+	{ "CALL NZ, 0x%04X",            2, call_nz_val},        // 0xc4
+	{ "PUSH BC",                    0, push_bc},                   // 0xc5
 	{ "ADD A, 0x%02X",              1, add_a_val},             // 0xc6
 	{ "RST 0x00",                   0, rst_0x00},                    // 0xc7
-	{ "RET Z",                      0},                       // 0xc8
-	{ "RET",                        0},                           // 0xc9
-	{ "JP Z, 0x%04X",               2},              // 0xca
-	{ "CB %02X",                    1},                      // 0xcb
-	{ "CALL Z, 0x%04X",             2},          // 0xcc
-	{ "CALL 0x%04X",                2},               // 0xcd
+	{ "RET Z",                      0, NULL},                       // 0xc8
+	{ "RET",                        0, NULL},                           // 0xc9
+	{ "JP Z, 0x%04X",               2, jp_z_val},              // 0xca
+	{ "CB %02X",                    1, NULL},                      // 0xcb
+	{ "CALL Z, 0x%04X",             2, call_z_val},          // 0xcc
+	{ "CALL 0x%04X",                2, call_val},               // 0xcd
 	{ "ADC 0x%02X",                 1, adc_a_val},                  // 0xce
 	{ "RST 0x08",                   0, rst_0x08},                   // 0xcf
-	{ "RET NC",                     0},                     // 0xd0
-	{ "POP DE",                     0},                     // 0xd1
-	{ "JP NC, 0x%04X",              2},            // 0xd2
+	{ "RET NC",                     0, NULL},                     // 0xd0
+	{ "POP DE",                     0, pop_de},                     // 0xd1
+	{ "JP NC, 0x%04X",              2, jp_nc_val},            // 0xd2
 	{ "UNKNOWN",                    0, unknown},                 // 0xd3
-	{ "CALL NC, 0x%04X",            2},        // 0xd4
-	{ "PUSH DE",                    0},                   // 0xd5
+	{ "CALL NC, 0x%04X",            2, call_nc_val},        // 0xd4
+	{ "PUSH DE",                    0, push_de},                   // 0xd5
 	{ "SUB 0x%02X",                 1, sub_val},                  // 0xd6
 	{ "RST 0x10",                   0, rst_0x10},                   // 0xd7
-	{ "RET C",                      0},                       // 0xd8
-	{ "RETI",                       0},          // 0xd9
-	{ "JP C, 0x%04X",               2},              // 0xda
+	{ "RET C",                      0, NULL},                       // 0xd8
+	{ "RETI",                       0, NULL},          // 0xd9
+	{ "JP C, 0x%04X",               2, jp_c_val},              // 0xda
 	{ "UNKNOWN",                    0, unknown},                 // 0xdb
-	{ "CALL C, 0x%04X",             2},          // 0xdc
+	{ "CALL C, 0x%04X",             2, call_c_val},          // 0xdc
 	{ "UNKNOWN",                    0, unknown},                 // 0xdd
-	{ "SBC 0x%02X",                 1},                  // 0xde
+	{ "SBC 0x%02X",                 1, sbc_val},                  // 0xde
 	{ "RST 0x18",                   0, rst_0x18},                   // 0xdf
-	{ "LD (0xFF00 + 0x%02X), A",    1},// 0xe0
-	{ "POP HL",                     0},                     // 0xe1
-	{ "LD (0xFF00 + C), A",         0},      // 0xe2
+	{ "LD (0xFF00 + 0x%02X), A",    1, ld_add8_a},// 0xe0
+	{ "POP HL",                     0, pop_hl},                     // 0xe1
+	{ "LD (0xFF00 + C), A",         0, ld_cp_a},      // 0xe2
 	{ "UNKNOWN",                    0, unknown},                 // 0xe3
 	{ "UNKNOWN",                    0, unknown},                 // 0xe4
-	{ "PUSH HL",                    0},                   // 0xe5
+	{ "PUSH HL",                    0, push_hl},                   // 0xe5
 	{ "AND 0x%02X",                 1, and_val},                  // 0xe6
 	{ "RST 0x20",                   0, rst_0x20},                   // 0xe7
 	{ "ADD SP,0x%02X",              1, add_sp_val},            // 0xe8
-	{ "JP HL",                      0},                       // 0xe9
-	{ "LD (0x%04X), A",             2},           // 0xea
+	{ "JP HL",                      0, jp_hl},                       // 0xe9
+	{ "LD (0x%04X), A",             2, ld_add16_a},           // 0xea
 	{ "UNKNOWN",                    0, unknown},                 // 0xeb
 	{ "UNKNOWN",                    0, unknown},                 // 0xec
 	{ "UNKNOWN",                    0, unknown},                 // 0xed
 	{ "XOR 0x%02X",                 1, xor_val},                  // 0xee
 	{ "RST 0x28",                   0, rst_0x28},                   // 0xef
-	{ "LD A, (0xFF00 + 0x%02X)",    1},// 0xf0
-	{ "POP AF",                     0},                     // 0xf1
-	{ "LD A, (0xFF00 + C)",         0},      // 0xf2
-	{ "DI",                         0},                        // 0xf3
+	{ "LD A, (0xFF00 + 0x%02X)",    1, ld_a_add8},// 0xf0
+	{ "POP AF",                     0, pop_af},                     // 0xf1
+	{ "LD A, (0xFF00 + C)",         0, ld_a_cp},      // 0xf2
+	{ "DI",                         0, NULL},                        // 0xf3
 	{ "UNKNOWN",                    0, unknown},                 // 0xf4
-	{ "PUSH AF",                    0},                   // 0xf5
+	{ "PUSH AF",                    0, push_af},                   // 0xf5
 	{ "OR 0x%02X",                  1, or_val},                    // 0xf6
 	{ "RST 0x30",                   0, rst_0x30},                   // 0xf7
-	{ "LD HL, SP+0x%02X",           1},       // 0xf8
+	{ "LD HL, SP+0x%02X",           1, ld_hl_spn},       // 0xf8
 	{ "LD SP, HL",                  0, ld_sp_hl},                // 0xf9
-	{ "LD A, (0x%04X)",             2},           // 0xfa
-	{ "EI",                         0},                             // 0xfb
+	{ "LD A, (0x%04X)",             2, ld_a_add16},           // 0xfa
+	{ "EI",                         0, NULL},                             // 0xfb
 	{ "UNKNOWN",                    0, unknown},                 // 0xfc
 	{ "UNKNOWN",                    0, unknown},                 // 0xfd
 	{ "CP 0x%02X",                  1, cp_val},                    // 0xfe
@@ -381,12 +381,24 @@ uint8_t sub(registers_t *registers, uint8_t reg1, uint8_t reg2) {
     return res;
 }
 
+void push(cpu_t cpu, uint16_t value) {
+    memoryWriteWord(cpu->memory, cpu->registers.sp, value);
+    cpu->registers.sp -= 2;
+}
+
+uint16_t pop(cpu_t cpu) {
+    uint16_t value = memoryReadWord(cpu->memory, cpu->registers.sp);
+    cpu->registers.sp += 2;
+    return value;
+}
+
 void unknown(cpu_t cpu) {
     fprintf(stderr, "Unknown opcode\n");
 }
 
 #define DEFINE_FUNC(ret, val1) \
     ret rst_##val1 (cpu_t cpu) {\
+        push(cpu, cpu->registers.pc);\
         cpu->registers.pc = val1;\
     }
 
@@ -537,6 +549,24 @@ REGISTERS_LIST
 REGISTERS_LIST
 #undef DEFINE_FUNC
 
+#define DEFINE_FUNC(ret, reg1) \
+    ret push_##reg1(cpu_t cpu) {\
+        push(cpu, cpu->registers.reg1);\
+    }
+
+DOUBLE_REGISTERS_LIST
+DEFINE_FUNC(void, af)
+#undef DEFINE_FUNC
+
+#define DEFINE_FUNC(ret, reg1) \
+    ret pop_##reg1(cpu_t cpu) {\
+        cpu->registers.reg1 = pop(cpu);\
+    }
+
+DOUBLE_REGISTERS_LIST
+DEFINE_FUNC(void, af)
+#undef DEFINE_FUNC
+
 void nop(cpu_t cpu) { }
 
 void cpl(cpu_t cpu) {
@@ -603,8 +633,32 @@ void ld_dep_a(cpu_t cpu) {
     memoryWriteByte(cpu->memory, cpu->registers.de, cpu->registers.a);
 }
 
+void ld_cp_a(cpu_t cpu) {
+    memoryWriteByte(cpu->memory, 0xFF00 + cpu->registers.c, cpu->registers.a);
+}
+
+void ld_a_cp(cpu_t cpu) {
+    cpu->registers.a = memoryReadByte(cpu->memory, 0xFF00 + cpu->registers.c);
+}
+
 void ld_a_dep(cpu_t cpu) {
     cpu->registers.a = memoryReadByte(cpu->memory, cpu->registers.de);
+}
+
+void ld_a_add16(cpu_t cpu, uint16_t address) {
+    cpu->registers.a = memoryReadByte(cpu->memory, address);
+}
+
+void ld_add16_a(cpu_t cpu, uint16_t address) {
+    memoryWriteByte(cpu->memory, address, cpu->registers.a);
+}
+
+void ld_a_add8(cpu_t cpu, uint8_t address) {
+    cpu->registers.a = memoryReadByte(cpu->memory, 0xFF00 + address);
+}
+
+void ld_add8_a(cpu_t cpu, uint8_t address) {
+    memoryWriteByte(cpu->memory, 0xff00 + address, cpu->registers.a);
 }
 
 void ldi_hlp_a(cpu_t cpu) {
@@ -667,6 +721,11 @@ void sub_val(cpu_t cpu, uint8_t val) {
     cpu->registers.a = sub(&cpu->registers, cpu->registers.a, val);
 }
 
+void sbc_val(cpu_t cpu, uint8_t val) {
+    uint8_t carry = (cpu->registers.f & 1<<4) >> 4;
+    cpu->registers.a = sub(&cpu->registers, cpu->registers.a, val + carry);
+}
+
 void inc_hlp(cpu_t cpu) {
     uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
     val++;
@@ -711,3 +770,163 @@ void scf(cpu_t cpu) {
     FLAG_CLEAR(cpu->registers.f, FLAG_SUB);
     FLAG_CLEAR(cpu->registers.f, FLAG_HIGH);
 }
+
+void jr_val(cpu_t cpu, uint8_t val) {
+    cpu->registers.pc += val;
+}
+
+void jr_c_val(cpu_t cpu, uint8_t val) {
+    if(!isSetFlag(cpu->registers.f, FLAG_CARRY))
+        return;
+    cpu->registers.pc += val;
+}
+
+void jr_nc_val(cpu_t cpu, uint8_t val) {
+    if(isSetFlag(cpu->registers.f, FLAG_CARRY))
+        return;
+    cpu->registers.pc += val;
+}
+
+void jr_z_val(cpu_t cpu, uint8_t val) {
+    if(!isSetFlag(cpu->registers.f, FLAG_ZERO))
+        return;
+    cpu->registers.pc += val;
+}
+
+void jr_nz_val(cpu_t cpu, uint8_t val) {
+    if(isSetFlag(cpu->registers.f, FLAG_ZERO))
+        return;
+    cpu->registers.pc += val;
+}
+
+void jp_val(cpu_t cpu, uint16_t val) {
+    cpu->registers.pc = val;
+}
+
+void jp_hl(cpu_t cpu) {
+    cpu->registers.pc = cpu->registers.hl;
+}
+
+void jp_c_val(cpu_t cpu, uint16_t val) {
+    if(!isSetFlag(cpu->registers.f, FLAG_CARRY))
+        return;
+    cpu->registers.pc = val;
+}
+
+void jp_nc_val(cpu_t cpu, uint16_t val) {
+    if(isSetFlag(cpu->registers.f, FLAG_CARRY))
+        return;
+    cpu->registers.pc = val;
+}
+
+void jp_z_val(cpu_t cpu, uint16_t val) {
+    if(!isSetFlag(cpu->registers.f, FLAG_ZERO))
+        return;
+    cpu->registers.pc = val;
+}
+
+void jp_nz_val(cpu_t cpu, uint16_t val) {
+    if(isSetFlag(cpu->registers.f, FLAG_ZERO))
+        return;
+    cpu->registers.pc = val;
+}
+
+void call_val(cpu_t cpu, uint16_t val) {
+    // nextAddress is given by adding to the current pc the value 3
+    // because 2 byte are read for the value, and the next one is the
+    // next instruction
+    uint16_t nextAddress = cpu->registers.pc + 3;
+    push(cpu, nextAddress);
+    cpu->registers.pc = val;
+}
+
+void call_c_val(cpu_t cpu, uint16_t val) {
+    if(!isSetFlag(cpu->registers.f, FLAG_CARRY))
+        return;
+    uint16_t nextAddress = cpu->registers.pc + 3;
+    push(cpu, nextAddress);
+    cpu->registers.pc = val;
+}
+
+void call_nc_val(cpu_t cpu, uint16_t val) {
+    if(isSetFlag(cpu->registers.f, FLAG_CARRY))
+        return;
+    uint16_t nextAddress = cpu->registers.pc + 3;
+    push(cpu, nextAddress);
+    cpu->registers.pc = val;
+}
+
+void call_z_val(cpu_t cpu, uint16_t val) {
+    if(!isSetFlag(cpu->registers.f, FLAG_ZERO))
+        return;
+    uint16_t nextAddress = cpu->registers.pc + 3;
+    push(cpu, nextAddress);
+    cpu->registers.pc = val;
+}
+
+void call_nz_val(cpu_t cpu, uint16_t val) {
+    if(isSetFlag(cpu->registers.f, FLAG_ZERO))
+        return;
+    uint16_t nextAddress = cpu->registers.pc + 3;
+    push(cpu, nextAddress);
+    cpu->registers.pc = val;
+}
+
+void rla(cpu_t cpu) {
+    uint8_t carry = (isSetFlag(cpu->registers.f, FLAG_CARRY)) ? 1 : 0;
+    uint8_t oldBit = cpu->registers.a & 0x80;
+
+    if(oldBit)
+        FLAG_SET(cpu->registers.f, FLAG_CARRY);
+    else
+        FLAG_CLEAR(cpu->registers.f, FLAG_CARRY);
+
+    cpu->registers.a <<= 1;
+    if(carry) cpu->registers.a |= 0x1;
+
+    FLAG_CLEAR(cpu->registers.f, FLAG_ZERO | FLAG_HIGH | FLAG_SUB);
+}
+
+void rlca(cpu_t cpu) {
+    uint8_t oldBit = cpu->registers.a & 0x80;
+
+    if(oldBit)
+        FLAG_SET(cpu->registers.f, FLAG_CARRY);
+    else
+        FLAG_CLEAR(cpu->registers.f, FLAG_CARRY);
+
+    cpu->registers.a <<= 1;
+    if(oldBit) cpu->registers.a |= 0x1;
+
+    FLAG_CLEAR(cpu->registers.f, FLAG_ZERO | FLAG_HIGH | FLAG_SUB);
+}
+
+void rra(cpu_t cpu) {
+    uint8_t carry = (isSetFlag(cpu->registers.f, FLAG_CARRY)) ? 1 : 0;
+    uint8_t oldBit = cpu->registers.a & 0x1;
+
+    if(oldBit)
+        FLAG_SET(cpu->registers.f, FLAG_CARRY);
+    else
+        FLAG_CLEAR(cpu->registers.f, FLAG_CARRY);
+
+    cpu->registers.a >>= 1;
+    if(carry) cpu->registers.a |= 0x80;
+
+    FLAG_CLEAR(cpu->registers.f, FLAG_ZERO | FLAG_HIGH | FLAG_SUB);
+}
+
+void rrca(cpu_t cpu) {
+    uint8_t oldBit = cpu->registers.a & 0x1;
+
+    if(oldBit)
+        FLAG_SET(cpu->registers.f, FLAG_CARRY);
+    else
+        FLAG_CLEAR(cpu->registers.f, FLAG_CARRY);
+
+    cpu->registers.a >>= 1;
+    if(oldBit) cpu->registers.a |= 0x80;
+
+    FLAG_CLEAR(cpu->registers.f, FLAG_ZERO | FLAG_HIGH | FLAG_SUB);
+}
+
