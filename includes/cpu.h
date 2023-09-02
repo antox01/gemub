@@ -13,6 +13,18 @@ typedef struct cpu_s *cpu_t;
 
 #define FLAG_SET(f, x) f |= x
 #define FLAG_CLEAR(f, x) f &= ~(x)
+#define isSetFlag(f, x) f & x
+
+#define RST_ADDRESSES \
+    DEFINE_FUNC(void, 0x00) \
+    DEFINE_FUNC(void, 0x08) \
+    DEFINE_FUNC(void, 0x10) \
+    DEFINE_FUNC(void, 0x18) \
+    DEFINE_FUNC(void, 0x20) \
+    DEFINE_FUNC(void, 0x28) \
+    DEFINE_FUNC(void, 0x30) \
+    DEFINE_FUNC(void, 0x38)
+    
 
 #define A_COMBINATION \
     DEFINE_FUNC(void, a, b) \
@@ -77,6 +89,11 @@ typedef struct cpu_s *cpu_t;
     DEFINE_FUNC(void, de) \
     DEFINE_FUNC(void, hl)
 
+#define DEFINE_FUNC(ret, val1) \
+    ret rst_##val1 (cpu_t cpu);
+
+RST_ADDRESSES
+#undef DEFINE_FUNC
 
 /**** LD 2 registers functions definitions ****/
 #define DEFINE_FUNC(ret, reg1, reg2) \
@@ -215,17 +232,50 @@ void and_hlp(cpu_t cpu);
 void or_hlp(cpu_t cpu);
 void xor_hlp(cpu_t cpu);
 void cp_hlp(cpu_t cpu);
+void and_val(cpu_t cpu, uint8_t val);
+void or_val(cpu_t cpu, uint8_t val);
+void xor_val(cpu_t cpu, uint8_t val);
+void ld_add_sp(cpu_t cpu, uint16_t address);
+void ld_a_dep(cpu_t cpu);
+void ld_dep_a(cpu_t cpu);
+void ld_a_bcp(cpu_t cpu);
+void ld_bcp_a(cpu_t cpu);
 void ld_hl_spn(cpu_t cpu, uint8_t val);
+void ld_hlp_val(cpu_t cpu, uint8_t val);
+
+void ldi_hlp_a(cpu_t cpu);
+void ldi_a_hlp(cpu_t cpu);
+void ldd_hlp_a(cpu_t cpu);
+void ldd_a_hlp(cpu_t cpu);
 
 void add_a_hlp (cpu_t cpu);
 void add_a_val (cpu_t cpu, uint8_t val);
+void add_sp_val (cpu_t cpu, int8_t val);
 void adc_a_hlp (cpu_t cpu);
 void adc_a_val (cpu_t cpu, uint8_t val);
+void sub_hlp(cpu_t cpu);
+void sbc_hlp(cpu_t cpu);
+void sub_val(cpu_t cpu, uint8_t val);
 
 void cp_val(cpu_t cpu, uint8_t val);
 void cp_hlp(cpu_t cpu);
 
+void inc_hlp(cpu_t cpu);
+void dec_hlp(cpu_t cpu);
+
+void ccf(cpu_t cpu);
+void scf(cpu_t cpu);
+
+void unknown(cpu_t cpu);
+
+/* Function to allocate a new cpu.
+ */
 cpu_t initCpu(memory_t memory);
+
+/* Function that free all the allocated memory for the CPU.
+ * Does not free the memory passed at the init function.
+ */
+void freeCpu(cpu_t cpu);
 char cpuOperandSize(unsigned char opcode);
 void cpuPrintInstruction(unsigned char opcode, unsigned short operand);
 
