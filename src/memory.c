@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "../includes/memory.h"
 #include "../includes/rom.h"
@@ -61,6 +62,25 @@ uint8_t memoryReadByte(memory_t memory, uint16_t address) {
     return romGetByte(memory->rom, address);
 }
 
+uint16_t memoryReadWord(memory_t memory, uint16_t address) {
+    if (address >= ECHO_RAM_OFFSET) {
+        fprintf(stderr, "Not implemented\n");
+        return 0x0;
+    }
+    if (address >= WORK_RAM_OFFSET) {
+        return *((uint16_t *)&memory->workRam[address - WORK_RAM_OFFSET]);
+    }
+    if (address >= EXTERNAL_RAM_OFFSET) {
+        fprintf(stderr, "Not implemented\n");
+        return 0x0;
+    }
+    if (address >= VIDEO_RAM_OFFSET) {
+        fprintf(stderr, "Not implemented\n");
+        return 0x0;
+    }
+    return romGetByte(memory->rom, address);
+}
+
 void memoryWriteByte(memory_t memory, uint16_t address, uint8_t value) {
     if (address >= ECHO_RAM_OFFSET) {
         fprintf(stderr, "Not implemented\n");
@@ -68,6 +88,25 @@ void memoryWriteByte(memory_t memory, uint16_t address, uint8_t value) {
     }
     if (address >= WORK_RAM_OFFSET) {
         memory->workRam[address - WORK_RAM_OFFSET] = value;
+        return;
+    }
+    if (address >= EXTERNAL_RAM_OFFSET) {
+        fprintf(stderr, "Not implemented\n");
+        return;
+    }
+    if (address >= VIDEO_RAM_OFFSET) {
+        fprintf(stderr, "Not implemented\n");
+        return;
+    }
+}
+
+void memoryWriteWord(memory_t memory, uint16_t address, uint16_t value) {
+    if (address >= ECHO_RAM_OFFSET) {
+        fprintf(stderr, "Not implemented\n");
+        return;
+    }
+    if (address >= WORK_RAM_OFFSET) {
+        memcpy(&memory->workRam[address - WORK_RAM_OFFSET], &value, sizeof(uint16_t));
         return;
     }
     if (address >= EXTERNAL_RAM_OFFSET) {
