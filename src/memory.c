@@ -21,7 +21,7 @@ memory_t initMemory(FILE *fin) {
         return NULL;
     }
     memory->rom = loadRom(fin);
-    ramSize = romGetByte(memory->rom, 0x149);
+    ramSize = romReadByte(memory->rom, 0x149);
     if(ramSize > 0) {
         memory->externalRam = malloc(ramSize * (1 << ramSize) * sizeof(uint8_t));
     } else {
@@ -45,40 +45,40 @@ void freeMemory(memory_t memory) {
 
 uint8_t memoryReadByte(memory_t memory, uint16_t address) {
     if (address >= ECHO_RAM_OFFSET) {
-        fprintf(stderr, "Not implemented\n");
+        fprintf(stderr, "Echo ram: Not implemented\n");
         return 0x0;
     }
     if (address >= WORK_RAM_OFFSET) {
         return memory->workRam[address - WORK_RAM_OFFSET];
     }
     if (address >= EXTERNAL_RAM_OFFSET) {
-        fprintf(stderr, "Not implemented\n");
+        fprintf(stderr, "External Ram: Not implemented\n");
         return 0x0;
     }
     if (address >= VIDEO_RAM_OFFSET) {
-        fprintf(stderr, "Not implemented\n");
+        fprintf(stderr, "Video Ram: Not implemented\n");
         return 0x0;
     }
-    return romGetByte(memory->rom, address);
+    return romReadByte(memory->rom, address);
 }
 
 uint16_t memoryReadWord(memory_t memory, uint16_t address) {
     if (address >= ECHO_RAM_OFFSET) {
-        fprintf(stderr, "Not implemented\n");
+        fprintf(stderr, "Echo Ram: Not implemented\n");
         return 0x0;
     }
     if (address >= WORK_RAM_OFFSET) {
         return *((uint16_t *)&memory->workRam[address - WORK_RAM_OFFSET]);
     }
     if (address >= EXTERNAL_RAM_OFFSET) {
-        fprintf(stderr, "Not implemented\n");
+        fprintf(stderr, "External Ram: Not implemented\n");
         return 0x0;
     }
     if (address >= VIDEO_RAM_OFFSET) {
-        fprintf(stderr, "Not implemented\n");
+        fprintf(stderr, "Video Ram: Not implemented\n");
         return 0x0;
     }
-    return romGetByte(memory->rom, address);
+    return romReadWord(memory->rom, address);
 }
 
 void memoryWriteByte(memory_t memory, uint16_t address, uint8_t value) {
@@ -117,4 +117,28 @@ void memoryWriteWord(memory_t memory, uint16_t address, uint16_t value) {
         fprintf(stderr, "Not implemented\n");
         return;
     }
+}
+
+uint8_t memoryHasAddress(memory_t memory, uint16_t address) {
+    if (address >= ECHO_RAM_OFFSET) {
+        fprintf(stderr, "Not implemented\n");
+        return 0;
+    }
+    if (address >= WORK_RAM_OFFSET) {
+        return 1;
+    }
+    if (address >= EXTERNAL_RAM_OFFSET) {
+        fprintf(stderr, "Not implemented\n");
+        return 0;
+    }
+    if (address >= VIDEO_RAM_OFFSET) {
+        fprintf(stderr, "Not implemented\n");
+        return 0;
+    }
+    
+    return 1;
+}
+
+void memoryDumpRom(memory_t memory) {
+    romDump(memory->rom);
 }
