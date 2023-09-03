@@ -38,6 +38,8 @@ typedef struct rom_s *rom_t;
 
 rom_t loadRom(FILE *fin);
 void freeRom(rom_t rom);
-unsigned char romGetByte(rom_t rom, unsigned short address);
+unsigned char romReadByte(rom_t rom, unsigned short address);
+unsigned short romReadWord(rom_t rom, unsigned short address);
+void romDump(rom_t rom);
 
 #endif
