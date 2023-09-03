@@ -443,6 +443,14 @@ void bit(cpu_t cpu, uint8_t val, uint8_t b) {
     FLAG_SET(FLAG_HALF);
 }
 
+uint8_t res(cpu_t cpu, uint8_t val, uint8_t b) {
+    return val & ~(1<<b);
+}
+
+uint8_t set(cpu_t cpu, uint8_t val, uint8_t b) {
+    return val | (1<<b);
+}
+
 void unknown(cpu_t cpu) {
     fprintf(stderr, "Unknown opcode\n");
 }
@@ -1117,7 +1125,7 @@ void ret_nz(cpu_t cpu) {
 }
 
 void cb_val(cpu_t cpu, uint8_t val) {
-    uint8_t tmp;
+    uint8_t tmp, tmp2;
     switch(val & 0xf0) {
     case 0x00:
         switch (val & 0x0f) {
@@ -1137,11 +1145,11 @@ void cb_val(cpu_t cpu, uint8_t val) {
             cpu->registers.h = rlc(cpu, cpu->registers.h);
             break;
         case 0x5:
-            cpu->registers.h = rlc(cpu, cpu->registers.h);
+            cpu->registers.l = rlc(cpu, cpu->registers.l);
             break;
         case 0x6: {
             tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
-            tmp = rlc(cpu, val);
+            tmp = rlc(cpu, tmp);
             memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
             break;
           }
@@ -1168,7 +1176,7 @@ void cb_val(cpu_t cpu, uint8_t val) {
             break;
         case 0xe: {
             tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
-            tmp = rrc(cpu, val);
+            tmp = rrc(cpu, tmp);
             memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
             break;
           }
@@ -1195,11 +1203,11 @@ void cb_val(cpu_t cpu, uint8_t val) {
             cpu->registers.h = rl(cpu, cpu->registers.h);
             break;
         case 0x5:
-            cpu->registers.h = rl(cpu, cpu->registers.h);
+            cpu->registers.l = rl(cpu, cpu->registers.l);
             break;
         case 0x6: {
             tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
-            tmp = rl(cpu, val);
+            tmp = rl(cpu, tmp);
             memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
             break;
           }
@@ -1226,7 +1234,7 @@ void cb_val(cpu_t cpu, uint8_t val) {
             break;
         case 0xe: {
             tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
-            tmp = rr(cpu, val);
+            tmp = rr(cpu, tmp);
             memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
             break;
           }
@@ -1253,11 +1261,11 @@ void cb_val(cpu_t cpu, uint8_t val) {
             cpu->registers.h = sla(cpu, cpu->registers.h);
             break;
         case 0x5:
-            cpu->registers.h = sla(cpu, cpu->registers.h);
+            cpu->registers.l = sla(cpu, cpu->registers.l);
             break;
         case 0x6: {
             tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
-            tmp = sla(cpu, val);
+            tmp = sla(cpu, tmp);
             memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
             break;
           }
@@ -1284,7 +1292,7 @@ void cb_val(cpu_t cpu, uint8_t val) {
             break;
         case 0xe: {
             tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
-            tmp = sra(cpu, val);
+            tmp = sra(cpu, tmp);
             memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
             break;
           }
@@ -1311,11 +1319,11 @@ void cb_val(cpu_t cpu, uint8_t val) {
             cpu->registers.h = swap(cpu, cpu->registers.h);
             break;
         case 0x5:
-            cpu->registers.h = swap(cpu, cpu->registers.h);
+            cpu->registers.l = swap(cpu, cpu->registers.l);
             break;
         case 0x6: {
             tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
-            tmp = swap(cpu, val);
+            tmp = swap(cpu, tmp);
             memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
             break;
           }
@@ -1342,7 +1350,7 @@ void cb_val(cpu_t cpu, uint8_t val) {
             break;
         case 0xe: {
             tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
-            tmp = srl(cpu, val);
+            tmp = srl(cpu, tmp);
             memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
             break;
           }
@@ -1351,40 +1359,112 @@ void cb_val(cpu_t cpu, uint8_t val) {
             break;
         }
         break;
-    case 0x40:
-        switch (val & 0x0f) {
+    default:
+        break;
+    }
+
+    if(0x40 <= (val & 0xf0) && (val & 0xf0) < 0x80) {
+        tmp2 = val - 0x40;
+        tmp2 &= 0x38;
+        tmp2 >>= 3;
+        // 0x3f = 00111111
+        // 0x3f & 0x38 = 00111111 & 00111000 = 00111000
+        switch (val & 0x07) {
         case 0x0:
-            cpu->registers.b = swap(cpu, cpu->registers.b);
+            bit(cpu, cpu->registers.b, tmp2);
             break;
         case 0x1:
-            cpu->registers.c = swap(cpu, cpu->registers.c);
+            bit(cpu, cpu->registers.c, tmp2);
             break;
         case 0x2:
-            cpu->registers.d = swap(cpu, cpu->registers.d);
+            bit(cpu, cpu->registers.d, tmp2);
             break;
         case 0x3:
-            cpu->registers.e = swap(cpu, cpu->registers.e);
+            bit(cpu, cpu->registers.e, tmp2);
             break;
         case 0x4:
-            cpu->registers.h = swap(cpu, cpu->registers.h);
+            bit(cpu, cpu->registers.h, tmp2);
             break;
         case 0x5:
-            cpu->registers.h = swap(cpu, cpu->registers.h);
+            bit(cpu, cpu->registers.l, tmp2);
             break;
         case 0x6: {
             tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
-            tmp = swap(cpu, val);
+            bit(cpu, tmp, tmp2);
             memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
             break;
           }
         case 0x7:
-            cpu->registers.a = swap(cpu, cpu->registers.a);
+            bit(cpu, cpu->registers.a, tmp2);
             break;
         }
-        break;
-    case 0xC0:
-        break;
-    default:
-        break;
+    } else if(0x80 <= (val & 0xf0) && (val & 0xf0) < 0xC0) {
+        tmp2 = val - 0x40;
+        tmp2 &= 0x38;
+        tmp2 >>= 3;
+        // 0x3f = 00111111
+        switch (val & 0x07) {
+        case 0x0:
+            cpu->registers.b = res(cpu, cpu->registers.b, tmp2);
+            break;
+        case 0x1:
+            cpu->registers.c = res(cpu, cpu->registers.c, tmp2);
+            break;
+        case 0x2:
+            cpu->registers.d = res(cpu, cpu->registers.d, tmp2);
+            break;
+        case 0x3:
+            cpu->registers.e = res(cpu, cpu->registers.e, tmp2);
+            break;
+        case 0x4:
+            cpu->registers.h = res(cpu, cpu->registers.h, tmp2);
+            break;
+        case 0x5:
+            cpu->registers.l = res(cpu, cpu->registers.l, tmp2);
+            break;
+        case 0x6: {
+            tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
+            tmp = res(cpu, tmp, tmp2);
+            memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
+            break;
+          }
+        case 0x7:
+            cpu->registers.a = res(cpu, cpu->registers.a, tmp2);
+            break;
+        }
+    } else if(0xC0 <= (val & 0xf0)) {
+        tmp2 = val - 0x40;
+        tmp2 &= 0x38;
+        tmp2 >>= 3;
+        // 0x3f = 00111111
+        switch (val & 0x07) {
+        case 0x0:
+            cpu->registers.b = set(cpu, cpu->registers.b, tmp2);
+            break;
+        case 0x1:
+            cpu->registers.c = set(cpu, cpu->registers.c, tmp2);
+            break;
+        case 0x2:
+            cpu->registers.d = set(cpu, cpu->registers.d, tmp2);
+            break;
+        case 0x3:
+            cpu->registers.e = set(cpu, cpu->registers.e, tmp2);
+            break;
+        case 0x4:
+            cpu->registers.h = set(cpu, cpu->registers.h, tmp2);
+            break;
+        case 0x5:
+            cpu->registers.l = set(cpu, cpu->registers.l, tmp2);
+            break;
+        case 0x6: {
+            tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
+            tmp = set(cpu, tmp, tmp2);
+            memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
+            break;
+          }
+        case 0x7:
+            cpu->registers.a = set(cpu, cpu->registers.a, tmp2);
+            break;
+        }
     }
 }
