@@ -89,7 +89,7 @@ const instruction_t instructions[256] = {
 	{ "INC H",                      0, inc_h},                       // 0x24
 	{ "DEC H",                      0, dec_h},                       // 0x25
 	{ "LD H, 0x%02X",               1, ld_h},               // 0x26
-	{ "DAA",                        0, NULL},                           // 0x27
+	{ "DAA",                        0, daa},                           // 0x27
 	{ "JR Z, 0x%02X",               1, jr_z_val},               // 0x28
 	{ "ADD HL, HL",                 0, add_hl_hl},              // 0x29
 	{ "LDI A, (HL)",                0, ldi_a_hlp},             // 0x2a
@@ -242,7 +242,7 @@ const instruction_t instructions[256] = {
 	{ "CP L",                       0, cp_l},                         // 0xbd
 	{ "CP (HL)",                    0, cp_hlp},                    // 0xbe
 	{ "CP A",                       0, cp_a},                         // 0xbf
-	{ "RET NZ",                     0, NULL},                     // 0xc0
+	{ "RET NZ",                     0, ret_nz},                     // 0xc0
 	{ "POP BC",                     0, pop_bc},                     // 0xc1
 	{ "JP NZ, 0x%04X",              2, jp_nz_val},            // 0xc2
 	{ "JP 0x%04X",                  2, jp_val},                   // 0xc3
@@ -250,15 +250,15 @@ const instruction_t instructions[256] = {
 	{ "PUSH BC",                    0, push_bc},                   // 0xc5
 	{ "ADD A, 0x%02X",              1, add_a_val},             // 0xc6
 	{ "RST 0x00",                   0, rst_0x00},                    // 0xc7
-	{ "RET Z",                      0, NULL},                       // 0xc8
-	{ "RET",                        0, NULL},                           // 0xc9
+	{ "RET Z",                      0, ret_z},                       // 0xc8
+	{ "RET",                        0, ret},                           // 0xc9
 	{ "JP Z, 0x%04X",               2, jp_z_val},              // 0xca
 	{ "CB %02X",                    1, NULL},                      // 0xcb
 	{ "CALL Z, 0x%04X",             2, call_z_val},          // 0xcc
 	{ "CALL 0x%04X",                2, call_val},               // 0xcd
 	{ "ADC 0x%02X",                 1, adc_a_val},                  // 0xce
 	{ "RST 0x08",                   0, rst_0x08},                   // 0xcf
-	{ "RET NC",                     0, NULL},                     // 0xd0
+	{ "RET NC",                     0, ret_nc},                     // 0xd0
 	{ "POP DE",                     0, pop_de},                     // 0xd1
 	{ "JP NC, 0x%04X",              2, jp_nc_val},            // 0xd2
 	{ "UNKNOWN",                    0, unknown},                 // 0xd3
@@ -266,7 +266,7 @@ const instruction_t instructions[256] = {
 	{ "PUSH DE",                    0, push_de},                   // 0xd5
 	{ "SUB 0x%02X",                 1, sub_val},                  // 0xd6
 	{ "RST 0x10",                   0, rst_0x10},                   // 0xd7
-	{ "RET C",                      0, NULL},                       // 0xd8
+	{ "RET C",                      0, ret_c},                       // 0xd8
 	{ "RETI",                       0, NULL},          // 0xd9
 	{ "JP C, 0x%04X",               2, jp_c_val},              // 0xda
 	{ "UNKNOWN",                    0, unknown},                 // 0xdb
@@ -311,6 +311,7 @@ const instruction_t instructions[256] = {
 cpu_t initCpu(memory_t memory) {
     cpu_t cpu = (cpu_t) malloc(sizeof(*cpu));
     cpu->memory = memory;
+    cpu->registers.pc = CPU_START_ADDRESS;
     return cpu;
 }
 
@@ -327,57 +328,88 @@ char cpuOperandSize(uint8_t opcode) {
     return instructions[opcode].operandSize;
 }
 
-void cpuPrintInstruction(uint8_t opcode, uint16_t operand) {
+void cpuPrintInstruction(uint16_t address, uint8_t opcode, uint16_t operand) {
+    fprintf(stdout, "%04x: ", address);
     fprintf(stdout, instructions[opcode].code, operand);
+    fprintf(stdout, " %02x %04x", opcode, operand);
     fprintf(stdout, "\n");
 }
 
-uint8_t add8(registers_t *registers, uint8_t reg1, uint8_t reg2) {
-    uint16_t sum = reg1 + reg2;
-    if((uint8_t)sum == 0) FLAG_SET(registers->f, FLAG_ZERO);/* Set the Z flag */
-    else FLAG_CLEAR(registers->f, FLAG_ZERO);
+uint8_t cpuStep(cpu_t cpu) {
+    uint8_t opcode;
+    uint16_t operand, operandSize = 0, pcOld;
 
-    FLAG_CLEAR(registers->f, FLAG_SUB);/* Reset the N flag */
+    pcOld = cpu->registers.pc;
+    if(!memoryHasAddress(cpu->memory, pcOld)) {
+        return 0;
+    }
+    opcode = memoryReadByte(cpu->memory, pcOld);
+    operandSize = cpuOperandSize(opcode);
+    if(operandSize == 1) {
+        operand = memoryReadByte(cpu->memory, pcOld + 1);
+        ((void (*)(cpu_t, uint8_t)) instructions[opcode].func)(cpu, operand);
+    } else if(operandSize == 2) {
+        operand = memoryReadWord(cpu->memory, pcOld + 1);
+        ((void (*)(cpu_t, uint16_t)) instructions[opcode].func)(cpu, operand);
+    } else {
+        ((void (*)(cpu_t)) instructions[opcode].func)(cpu);
+    }
+    cpuPrintInstruction(pcOld, opcode, operand);
+
+    // Check for change of pc while executing instruction
+    if(cpu->registers.pc == pcOld) {
+        cpu->registers.pc = pcOld + operandSize + 1;
+    }
+
+    return 1;
+}
+
+uint8_t add8(cpu_t cpu, uint8_t reg1, uint8_t reg2) {
+    uint16_t sum = reg1 + reg2;
+    if((uint8_t)sum == 0) FLAG_SET(FLAG_ZERO);/* Set the Z flag */
+    else FLAG_CLEAR(FLAG_ZERO);
+
+    FLAG_CLEAR(FLAG_SUB);/* Reset the N flag */
     if((reg1 & 0x0f) + (reg2 & 0x0f) > 0x0f)
-        FLAG_SET(registers->f, FLAG_HIGH);/* Set the H flag */
+        FLAG_SET(FLAG_HALF);/* Set the H flag */
     else
-        FLAG_CLEAR(registers->f, FLAG_HIGH);
+        FLAG_CLEAR(FLAG_HALF);
     if((sum & 0xff00))
-        FLAG_SET(registers->f, FLAG_CARRY);/* Set the C flag */
+        FLAG_SET(FLAG_CARRY);/* Set the C flag */
     else
-        FLAG_SET(registers->f, FLAG_CARRY);
+        FLAG_SET(FLAG_CARRY);
     return sum;
 }
 
-uint16_t add16(registers_t *registers, uint16_t reg1, uint16_t reg2) {
+uint16_t add16(cpu_t cpu, uint16_t reg1, uint16_t reg2) {
     uint32_t sum = reg1 + reg2;
 
-    FLAG_CLEAR(registers->f, FLAG_SUB);/* Reset the N flag */
+    FLAG_CLEAR(FLAG_SUB);/* Reset the N flag */
     if((reg1 & 0x7ff) + (reg2 & 0x7ff) > 0x7ff)
-        FLAG_SET(registers->f, FLAG_HIGH);/* Set the H flag */
+        FLAG_SET(FLAG_HALF);/* Set the H flag */
     else
-     FLAG_CLEAR(registers->f, FLAG_HIGH);
+     FLAG_CLEAR(FLAG_HALF);
     if((sum & 0xffff0000))
-        FLAG_SET(registers->f, FLAG_CARRY);/* Set the C flag */
+        FLAG_SET(FLAG_CARRY);/* Set the C flag */
     else
-        FLAG_CLEAR(registers->f, FLAG_CARRY);/* Set the C flag */
+        FLAG_CLEAR(FLAG_CARRY);/* Set the C flag */
     return sum;
 }
 
-uint8_t sub(registers_t *registers, uint8_t reg1, uint8_t reg2) {
+uint8_t sub(cpu_t cpu, uint8_t reg1, uint8_t reg2) {
     uint16_t res = reg1 - reg2;
-    if((uint8_t)res == 0) FLAG_SET(registers->f, FLAG_ZERO);/* Set the Z flag */
-    else FLAG_CLEAR(registers->f, FLAG_ZERO);
+    if((uint8_t)res == 0) FLAG_SET(FLAG_ZERO);/* Set the Z flag */
+    else FLAG_CLEAR(FLAG_ZERO);
 
-    FLAG_CLEAR(registers->f, FLAG_SUB);/* Reset the N flag */
+    FLAG_CLEAR(FLAG_SUB);/* Reset the N flag */
     if((reg1 & 0x0f) < (reg2 & 0x0f))
-        FLAG_SET(registers->f, FLAG_HIGH);/* Set the H flag */
+        FLAG_SET(FLAG_HALF);/* Set the H flag */
     else
-        FLAG_CLEAR(registers->f, FLAG_HIGH);
+        FLAG_CLEAR(FLAG_HALF);
     if(reg1 < reg2)
-        FLAG_SET(registers->f, FLAG_CARRY);/* Set the C flag */
+        FLAG_SET(FLAG_CARRY);/* Set the C flag */
     else
-        FLAG_SET(registers->f, FLAG_CARRY);
+        FLAG_SET(FLAG_CARRY);
     return res;
 }
 
@@ -449,7 +481,7 @@ DEFINE_FUNC(void, sp)
 
 #define DEFINE_FUNC(ret, reg1, reg2) \
     ret add_##reg1##_##reg2 (cpu_t cpu) {\
-        cpu->registers.reg1 = add8(&(cpu->registers), cpu->registers.reg1, cpu->registers.reg2);\
+        cpu->registers.reg1 = add8(cpu, cpu->registers.reg1, cpu->registers.reg2);\
     }
 A_COMBINATION
 DEFINE_FUNC(void, a, a)
@@ -457,7 +489,7 @@ DEFINE_FUNC(void, a, a)
 
 #define DEFINE_FUNC(ret, reg1) \
     ret add_hl_##reg1 (cpu_t cpu) {\
-        cpu->registers.hl = add16(&cpu->registers, cpu->registers.hl, cpu->registers.reg1);\
+        cpu->registers.hl = add16(cpu, cpu->registers.hl, cpu->registers.reg1);\
     }
 DOUBLE_REGISTERS_LIST
 DEFINE_FUNC(void, sp)
@@ -466,7 +498,7 @@ DEFINE_FUNC(void, sp)
 #define DEFINE_FUNC(ret, reg1, reg2) \
     ret adc_##reg1##_##reg2 (cpu_t cpu) {\
         uint8_t carry = (cpu->registers.f & 1<<4) >> 4;\
-        cpu->registers.reg1 = add8(&cpu->registers, cpu->registers.reg1, cpu->registers.reg2 + carry);\
+        cpu->registers.reg1 = add8(cpu, cpu->registers.reg1, cpu->registers.reg2 + carry);\
     }
 A_COMBINATION
 DEFINE_FUNC(void, a, a)
@@ -474,7 +506,7 @@ DEFINE_FUNC(void, a, a)
 
 #define DEFINE_FUNC(ret, reg1) \
     ret sub_##reg1 (cpu_t cpu) {\
-        cpu->registers.a = sub(&cpu->registers, cpu->registers.a, cpu->registers.reg1);\
+        cpu->registers.a = sub(cpu, cpu->registers.a, cpu->registers.reg1);\
     }
 
 REGISTERS_LIST
@@ -483,7 +515,7 @@ REGISTERS_LIST
 #define DEFINE_FUNC(ret, reg1) \
     ret sbc_##reg1 (cpu_t cpu) {\
         uint8_t carry = (cpu->registers.f & 1<<4) >> 4;\
-        cpu->registers.a = sub(&cpu->registers, cpu->registers.a, cpu->registers.reg1 + carry);\
+        cpu->registers.a = sub(cpu, cpu->registers.a, cpu->registers.reg1 + carry);\
     }
 
 REGISTERS_LIST
@@ -491,10 +523,7 @@ REGISTERS_LIST
 
 #define DEFINE_FUNC(ret, reg1) \
     ret inc_##reg1 (cpu_t cpu) {\
-        cpu->registers.reg1 += 1;\
-        if(cpu->registers.reg1 == 0) FLAG_SET(cpu->registers.f, FLAG_ZERO);/* Set the Z flag */\
-        FLAG_CLEAR(cpu->registers.f, FLAG_SUB);/* Reset the N flag */\
-        if((cpu->registers.reg1 & 0x0f) == 0) FLAG_SET(cpu->registers.f, FLAG_HIGH);/* Set the H flag */\
+        cpu->registers.reg1 = add8(cpu, cpu->registers.reg1, 1);\
     }
 
 REGISTERS_LIST
@@ -504,10 +533,7 @@ DEFINE_FUNC(void, sp)
 
 #define DEFINE_FUNC(ret, reg1) \
     ret dec_##reg1 (cpu_t cpu) {\
-        if((cpu->registers.reg1 & 0xf) == 0) FLAG_SET(cpu->registers.f, FLAG_HIGH);\
-        cpu->registers.reg1 -= 1;\
-        if(cpu->registers.reg1 == 0) FLAG_SET(cpu->registers.f, FLAG_ZERO);\
-        FLAG_SET(cpu->registers.f, FLAG_SUB);\
+        cpu->registers.reg1 = sub(cpu, cpu->registers.reg1, 1);\
     }
 
 REGISTERS_LIST
@@ -543,7 +569,7 @@ REGISTERS_LIST
 
 #define DEFINE_FUNC(ret, reg1) \
     ret cp_##reg1(cpu_t cpu) {\
-        sub(&cpu->registers, cpu->registers.a, cpu->registers.reg1);\
+        sub(cpu, cpu->registers.a, cpu->registers.reg1);\
     }
 
 REGISTERS_LIST
@@ -602,11 +628,11 @@ void xor_val(cpu_t cpu, uint8_t val) {
 
 void cp_hlp(cpu_t cpu) {
     uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
-    sub(&cpu->registers, cpu->registers.a, val);
+    sub(cpu, cpu->registers.a, val);
 }
 
 void cp_val(cpu_t cpu, uint8_t val) {
-    sub(&cpu->registers, cpu->registers.a, val);
+    sub(cpu, cpu->registers.a, val);
 }
 
 void ld_add_sp(cpu_t cpu, uint16_t address) {
@@ -684,91 +710,73 @@ void ldd_a_hlp(cpu_t cpu) {
 
 void add_a_hlp (cpu_t cpu) {
     uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
-    cpu->registers.a = add8(&cpu->registers, cpu->registers.a, val);
+    cpu->registers.a = add8(cpu, cpu->registers.a, val);
 }
 
 void add_a_val (cpu_t cpu, uint8_t val) {
-    cpu->registers.a = add8(&cpu->registers, cpu->registers.a, val);
+    cpu->registers.a = add8(cpu, cpu->registers.a, val);
 }
 
 void add_sp_val (cpu_t cpu, int8_t val) {
-    cpu->registers.sp = add8(&cpu->registers, cpu->registers.sp, val);
+    cpu->registers.sp = add8(cpu, cpu->registers.sp, val);
 }
 
 void adc_a_hlp (cpu_t cpu) {
     uint8_t carry = (cpu->registers.f & 1<<4) >> 4;
     uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
-    cpu->registers.a = add8(&cpu->registers, cpu->registers.a, val + carry);
+    cpu->registers.a = add8(cpu, cpu->registers.a, val + carry);
 }
 
 void adc_a_val (cpu_t cpu, uint8_t val) {
     uint8_t carry = (cpu->registers.f & 1<<4) >> 4;
-    cpu->registers.a = add8(&cpu->registers, cpu->registers.a, val + carry);
+    cpu->registers.a = add8(cpu, cpu->registers.a, val + carry);
 }
 
 void sub_hlp(cpu_t cpu) {
     uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
-    cpu->registers.a = sub(&cpu->registers, cpu->registers.a, val);
+    cpu->registers.a = sub(cpu, cpu->registers.a, val);
 }
 
 void sbc_hlp(cpu_t cpu) {
     uint8_t carry = (cpu->registers.f & 1<<4) >> 4;
     uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
-    cpu->registers.a = sub(&cpu->registers, cpu->registers.a, val + carry);
+    cpu->registers.a = sub(cpu, cpu->registers.a, val + carry);
 }
 
 void sub_val(cpu_t cpu, uint8_t val) {
-    cpu->registers.a = sub(&cpu->registers, cpu->registers.a, val);
+    cpu->registers.a = sub(cpu, cpu->registers.a, val);
 }
 
 void sbc_val(cpu_t cpu, uint8_t val) {
     uint8_t carry = (cpu->registers.f & 1<<4) >> 4;
-    cpu->registers.a = sub(&cpu->registers, cpu->registers.a, val + carry);
+    cpu->registers.a = sub(cpu, cpu->registers.a, val + carry);
 }
 
 void inc_hlp(cpu_t cpu) {
     uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
-    val++;
-    if(val == 0)
-        FLAG_SET(cpu->registers.f, FLAG_ZERO);/* Set the Z flag */\
-    else
-        FLAG_CLEAR(cpu->registers.f, FLAG_ZERO);/* Set the Z flag */\
-    FLAG_CLEAR(cpu->registers.f, FLAG_SUB);/* Reset the N flag */\
-    if((val & 0x0f) == 0)
-        FLAG_SET(cpu->registers.f, FLAG_HIGH);/* Set the H flag */\
-    else
-        FLAG_CLEAR(cpu->registers.f, FLAG_HIGH);
+    val = add8(cpu, val, 1);
     memoryWriteByte(cpu->memory, cpu->registers.hl, val);
 }
 
 void dec_hlp(cpu_t cpu) {
     uint8_t val = memoryReadByte(cpu->memory, cpu->registers.hl);
-    if((val & 0xf) == 0)
-        FLAG_SET(cpu->registers.f, FLAG_HIGH);
-    else
-        FLAG_CLEAR(cpu->registers.f, FLAG_HIGH);
-    val--;
-    if(val == 0)
-        FLAG_SET(cpu->registers.f, FLAG_ZERO);
-    else
-        FLAG_CLEAR(cpu->registers.f, FLAG_ZERO);/* Set the Z flag */\
-    FLAG_SET(cpu->registers.f, FLAG_SUB);
+    val = sub(cpu, val, 1);
     memoryWriteByte(cpu->memory, cpu->registers.hl, val);
 }
 
 void ccf(cpu_t cpu) {
-    if(isSetFlag(cpu->registers.f, FLAG_CARRY))
-        FLAG_CLEAR(cpu->registers.f, FLAG_CARRY);
+    if(FLAG_ISSET(FLAG_CARRY))
+        FLAG_CLEAR(FLAG_CARRY);
     else
-        FLAG_SET(cpu->registers.f, FLAG_CARRY);
-    FLAG_CLEAR(cpu->registers.f, FLAG_SUB);
-    FLAG_CLEAR(cpu->registers.f, FLAG_HIGH);
+        FLAG_SET(FLAG_CARRY);
+    FLAG_CLEAR(FLAG_SUB);
+    FLAG_CLEAR(FLAG_HALF);
 }
 
 void scf(cpu_t cpu) {
-    FLAG_SET(cpu->registers.f, FLAG_CARRY);
-    FLAG_CLEAR(cpu->registers.f, FLAG_SUB);
-    FLAG_CLEAR(cpu->registers.f, FLAG_HIGH);
+    FLAG_SET(FLAG_CARRY);
+    FLAG_CLEAR(FLAG_SUB);
+    FLAG_CLEAR(FLAG_HALF);
 }
 
 void jr_val(cpu_t cpu, uint8_t val) {
@@ -776,25 +784,25 @@ void jr_val(cpu_t cpu, uint8_t val) {
 }
 
 void jr_c_val(cpu_t cpu, uint8_t val) {
-    if(!isSetFlag(cpu->registers.f, FLAG_CARRY))
+    if(!FLAG_ISSET(FLAG_CARRY))
         return;
     cpu->registers.pc += val;
 }
 
 void jr_nc_val(cpu_t cpu, uint8_t val) {
-    if(isSetFlag(cpu->registers.f, FLAG_CARRY))
+    if(FLAG_ISSET(FLAG_CARRY))
         return;
     cpu->registers.pc += val;
 }
 
 void jr_z_val(cpu_t cpu, uint8_t val) {
-    if(!isSetFlag(cpu->registers.f, FLAG_ZERO))
+    if(!FLAG_ISSET(FLAG_ZERO))
         return;
     cpu->registers.pc += val;
 }
 
 void jr_nz_val(cpu_t cpu, uint8_t val) {
-    if(isSetFlag(cpu->registers.f, FLAG_ZERO))
+    if(FLAG_ISSET(FLAG_ZERO))
         return;
     cpu->registers.pc += val;
 }
@@ -808,25 +816,25 @@ void jp_hl(cpu_t cpu) {
 }
 
 void jp_c_val(cpu_t cpu, uint16_t val) {
-    if(!isSetFlag(cpu->registers.f, FLAG_CARRY))
+    if(!FLAG_ISSET(FLAG_CARRY))
         return;
     cpu->registers.pc = val;
 }
 
 void jp_nc_val(cpu_t cpu, uint16_t val) {
-    if(isSetFlag(cpu->registers.f, FLAG_CARRY))
+    if(FLAG_ISSET(FLAG_CARRY))
         return;
     cpu->registers.pc = val;
 }
 
 void jp_z_val(cpu_t cpu, uint16_t val) {
-    if(!isSetFlag(cpu->registers.f, FLAG_ZERO))
+    if(!FLAG_ISSET(FLAG_ZERO))
         return;
     cpu->registers.pc = val;
 }
 
 void jp_nz_val(cpu_t cpu, uint16_t val) {
-    if(isSetFlag(cpu->registers.f, FLAG_ZERO))
+    if(FLAG_ISSET(FLAG_ZERO))
         return;
     cpu->registers.pc = val;
 }
@@ -841,7 +849,7 @@ void call_val(cpu_t cpu, uint16_t val) {
 }
 
 void call_c_val(cpu_t cpu, uint16_t val) {
-    if(!isSetFlag(cpu->registers.f, FLAG_CARRY))
+    if(!FLAG_ISSET(FLAG_CARRY))
         return;
     uint16_t nextAddress = cpu->registers.pc + 3;
     push(cpu, nextAddress);
@@ -849,7 +857,7 @@ void call_c_val(cpu_t cpu, uint16_t val) {
 }
 
 void call_nc_val(cpu_t cpu, uint16_t val) {
-    if(isSetFlag(cpu->registers.f, FLAG_CARRY))
+    if(FLAG_ISSET(FLAG_CARRY))
         return;
     uint16_t nextAddress = cpu->registers.pc + 3;
     push(cpu, nextAddress);
@@ -857,7 +865,7 @@ void call_nc_val(cpu_t cpu, uint16_t val) {
 }
 
 void call_z_val(cpu_t cpu, uint16_t val) {
-    if(!isSetFlag(cpu->registers.f, FLAG_ZERO))
+    if(!FLAG_ISSET(FLAG_ZERO))
         return;
     uint16_t nextAddress = cpu->registers.pc + 3;
     push(cpu, nextAddress);
@@ -865,7 +873,7 @@ void call_z_val(cpu_t cpu, uint16_t val) {
 }
 
 void call_nz_val(cpu_t cpu, uint16_t val) {
-    if(isSetFlag(cpu->registers.f, FLAG_ZERO))
+    if(FLAG_ISSET(FLAG_ZERO))
         return;
     uint16_t nextAddress = cpu->registers.pc + 3;
     push(cpu, nextAddress);
@@ -873,60 +881,115 @@ void call_nz_val(cpu_t cpu, uint16_t val) {
 }
 
 void rla(cpu_t cpu) {
-    uint8_t carry = (isSetFlag(cpu->registers.f, FLAG_CARRY)) ? 1 : 0;
+    uint8_t carry = (FLAG_ISSET(FLAG_CARRY)) ? 1 : 0;
     uint8_t oldBit = cpu->registers.a & 0x80;
 
     if(oldBit)
-        FLAG_SET(cpu->registers.f, FLAG_CARRY);
+        FLAG_SET(FLAG_CARRY);
     else
-        FLAG_CLEAR(cpu->registers.f, FLAG_CARRY);
+        FLAG_CLEAR(FLAG_CARRY);
 
     cpu->registers.a <<= 1;
     if(carry) cpu->registers.a |= 0x1;
 
-    FLAG_CLEAR(cpu->registers.f, FLAG_ZERO | FLAG_HIGH | FLAG_SUB);
+    FLAG_CLEAR(FLAG_ZERO | FLAG_HALF | FLAG_SUB);
 }
 
 void rlca(cpu_t cpu) {
     uint8_t oldBit = cpu->registers.a & 0x80;
 
     if(oldBit)
-        FLAG_SET(cpu->registers.f, FLAG_CARRY);
+        FLAG_SET(FLAG_CARRY);
     else
-        FLAG_CLEAR(cpu->registers.f, FLAG_CARRY);
+        FLAG_CLEAR(FLAG_CARRY);
 
     cpu->registers.a <<= 1;
     if(oldBit) cpu->registers.a |= 0x1;
 
-    FLAG_CLEAR(cpu->registers.f, FLAG_ZERO | FLAG_HIGH | FLAG_SUB);
+    FLAG_CLEAR(FLAG_ZERO | FLAG_HALF | FLAG_SUB);
 }
 
 void rra(cpu_t cpu) {
-    uint8_t carry = (isSetFlag(cpu->registers.f, FLAG_CARRY)) ? 1 : 0;
+    uint8_t carry = (FLAG_ISSET(FLAG_CARRY)) ? 1 : 0;
     uint8_t oldBit = cpu->registers.a & 0x1;
 
     if(oldBit)
-        FLAG_SET(cpu->registers.f, FLAG_CARRY);
+        FLAG_SET(FLAG_CARRY);
     else
-        FLAG_CLEAR(cpu->registers.f, FLAG_CARRY);
+        FLAG_CLEAR(FLAG_CARRY);
 
     cpu->registers.a >>= 1;
     if(carry) cpu->registers.a |= 0x80;
 
-    FLAG_CLEAR(cpu->registers.f, FLAG_ZERO | FLAG_HIGH | FLAG_SUB);
+    FLAG_CLEAR(FLAG_ZERO | FLAG_HALF | FLAG_SUB);
 }
 
 void rrca(cpu_t cpu) {
     uint8_t oldBit = cpu->registers.a & 0x1;
 
     if(oldBit)
-        FLAG_SET(cpu->registers.f, FLAG_CARRY);
+        FLAG_SET(FLAG_CARRY);
     else
-        FLAG_CLEAR(cpu->registers.f, FLAG_CARRY);
+        FLAG_CLEAR(FLAG_CARRY);
 
     cpu->registers.a >>= 1;
     if(oldBit) cpu->registers.a |= 0x80;
 
-    FLAG_CLEAR(cpu->registers.f, FLAG_ZERO | FLAG_HIGH | FLAG_SUB);
+    FLAG_CLEAR(FLAG_ZERO | FLAG_HALF | FLAG_SUB);
 }
+
+void daa(cpu_t cpu) {
+    if(!FLAG_ISSET(FLAG_SUB)) {
+        if(FLAG_ISSET(FLAG_CARRY) || cpu->registers.a > 0x99) {
+            cpu->registers.a += 0x60;
+            FLAG_SET(FLAG_CARRY);
+        }
+
+        if(FLAG_ISSET(FLAG_HALF) || (cpu->registers.a & 0xf) > 0x9) {
+            cpu->registers.a += 0x6;
+        }
+    } else {
+        if(FLAG_ISSET(FLAG_CARRY)) {
+            cpu->registers.a -= 0x60;
+        }
+
+        if(FLAG_ISSET(FLAG_HALF)) {
+            cpu->registers.a -= 0x6;
+        }
+    }
+
+    if(cpu->registers.a == 0) FLAG_SET(FLAG_ZERO);
+    else FLAG_CLEAR(FLAG_ZERO);
+
+    FLAG_CLEAR(FLAG_HALF);
+}
+
+void ret(cpu_t cpu) {
+    cpu->registers.pc = pop(cpu);
+}
+
+void ret_c(cpu_t cpu) {
+    if(!FLAG_ISSET(FLAG_CARRY))
+        return;
+    cpu->registers.pc = pop(cpu);
+}
+
+void ret_nc(cpu_t cpu) {
+    if(FLAG_ISSET(FLAG_CARRY))
+        return;
+    cpu->registers.pc = pop(cpu);
+}
+
+void ret_z(cpu_t cpu) {
+    if(!FLAG_ISSET(FLAG_CARRY))
+        return;
+    cpu->registers.pc = pop(cpu);
+}
+
+void ret_nz(cpu_t cpu) {
+    if(FLAG_ISSET(FLAG_CARRY))
+        return;
+    cpu->registers.pc = pop(cpu);
+}
+
 

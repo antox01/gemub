@@ -4,16 +4,18 @@
 #include "memory.h"
 enum flag_e {
     FLAG_CARRY = 1 << 4,
-    FLAG_HIGH = 1 << 5,
+    FLAG_HALF = 1 << 5,
     FLAG_SUB = 1<<6,
     FLAG_ZERO = 1<<7
 };
 
 typedef struct cpu_s *cpu_t;
 
-#define FLAG_SET(f, x) f |= x
-#define FLAG_CLEAR(f, x) f &= ~(x)
-#define isSetFlag(f, x) ((f & x) != 0)
+#define FLAG_SET(x) cpu->registers.f |= x
+#define FLAG_CLEAR(x) cpu->registers.f &= ~(x)
+#define FLAG_ISSET(x) ((cpu->registers.f & x) != 0)
+
+#define CPU_START_ADDRESS 0x100
 
 #define RST_ADDRESSES \
     DEFINE_FUNC(void, 0x00) \
@@ -299,6 +301,14 @@ void rlca(cpu_t cpu);
 void rra(cpu_t cpu);
 void rrca(cpu_t cpu);
 
+void daa(cpu_t cpu);
+
+void ret(cpu_t cpu);
+void ret_c(cpu_t cpu);
+void ret_nc(cpu_t cpu);
+void ret_z(cpu_t cpu);
+void ret_nz(cpu_t cpu);
+
 void unknown(cpu_t cpu);
 
 /* Function to allocate a new cpu.
@@ -310,6 +320,8 @@ cpu_t initCpu(memory_t memory);
  */
 void freeCpu(cpu_t cpu);
 char cpuOperandSize(unsigned char opcode);
-void cpuPrintInstruction(unsigned char opcode, unsigned short operand);
+void cpuPrintInstruction(uint16_t address, unsigned char opcode, unsigned short operand);
+
+uint8_t cpuStep(cpu_t cpu);
 
 #endif
