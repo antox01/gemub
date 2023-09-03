@@ -309,6 +309,8 @@ void ret_nc(cpu_t cpu);
 void ret_z(cpu_t cpu);
 void ret_nz(cpu_t cpu);
 
+void cb_val(cpu_t cpu, uint8_t val);
+
 void unknown(cpu_t cpu);
 
 /* Function to allocate a new cpu.

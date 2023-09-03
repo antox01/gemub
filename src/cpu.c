@@ -424,8 +424,132 @@ uint16_t pop(cpu_t cpu) {
     return value;
 }
 
+uint8_t swap(cpu_t cpu, uint8_t val) {
+    uint8_t res = (val & 0x0f) << 4 | (val &0xf0) >> 4;
+
+    if(res == 0) FLAG_SET(FLAG_ZERO);
+    else FLAG_CLEAR(FLAG_ZERO);
+
+    FLAG_CLEAR(FLAG_SUB);
+    FLAG_CLEAR(FLAG_HALF);
+    FLAG_CLEAR(FLAG_CARRY);
+    return res;
+}
+
+void bit(cpu_t cpu, uint8_t val, uint8_t b) {
+    if((val & (1 << b)) == 0) FLAG_SET(FLAG_ZERO);
+    else FLAG_CLEAR(FLAG_ZERO);
+    FLAG_CLEAR(FLAG_SUB);
+    FLAG_SET(FLAG_HALF);
+}
+
 void unknown(cpu_t cpu) {
     fprintf(stderr, "Unknown opcode\n");
+}
+
+uint8_t rl(cpu_t cpu, uint8_t val) {
+    uint8_t carry = (FLAG_ISSET(FLAG_CARRY)) ? 1 : 0;
+    uint8_t res = val;
+    uint8_t oldBit = res & 0x80;
+
+    if(oldBit)
+        FLAG_SET(FLAG_CARRY);
+    else
+        FLAG_CLEAR(FLAG_CARRY);
+
+    res <<= 1;
+    if(carry) res |= 0x1;
+
+    FLAG_CLEAR(FLAG_ZERO | FLAG_HALF | FLAG_SUB);
+    return res;
+}
+
+uint8_t rlc(cpu_t cpu, uint8_t val) {
+    uint8_t res = val;
+    uint8_t oldBit = res & 0x80;
+
+    if(oldBit)
+        FLAG_SET(FLAG_CARRY);
+    else
+        FLAG_CLEAR(FLAG_CARRY);
+
+    res <<= 1;
+    if(oldBit) res |= 0x1;
+
+    FLAG_CLEAR(FLAG_ZERO | FLAG_HALF | FLAG_SUB);
+    return res;
+}
+
+uint8_t rr(cpu_t cpu, uint8_t val) {
+    uint8_t carry = (FLAG_ISSET(FLAG_CARRY)) ? 1 : 0;
+    uint8_t res = val;
+    uint8_t oldBit = res & 0x1;
+
+    if(oldBit)
+        FLAG_SET(FLAG_CARRY);
+    else
+        FLAG_CLEAR(FLAG_CARRY);
+
+    res >>= 1;
+    if(carry) res |= 0x80;
+
+    FLAG_CLEAR(FLAG_ZERO | FLAG_HALF | FLAG_SUB);
+    return res;
+}
+
+uint8_t rrc(cpu_t cpu, uint8_t val) {
+    uint8_t res = val;
+    uint8_t oldBit = res & 0x1;
+
+    if(oldBit)
+        FLAG_SET(FLAG_CARRY);
+    else
+        FLAG_CLEAR(FLAG_CARRY);
+
+    res >>= 1;
+    if(oldBit) res |= 0x80;
+
+    FLAG_CLEAR(FLAG_ZERO | FLAG_HALF | FLAG_SUB);
+    return res;
+}
+
+uint8_t sla(cpu_t cpu, uint8_t val) {
+    uint8_t res = val << 1;
+
+    if(res == 0) FLAG_SET(FLAG_ZERO);
+    else FLAG_CLEAR(FLAG_ZERO);
+
+    if(val & 0x80) FLAG_SET(FLAG_CARRY);
+    else FLAG_CLEAR(FLAG_CARRY);
+
+    FLAG_CLEAR(FLAG_HALF | FLAG_SUB);
+    return res;
+}
+
+uint8_t sra(cpu_t cpu, uint8_t val) {
+    uint8_t res = val >> 1 | (val & 0x80);
+
+    if(res == 0) FLAG_SET(FLAG_ZERO);
+    else FLAG_CLEAR(FLAG_ZERO);
+
+    if(val & 0x1) FLAG_SET(FLAG_CARRY);
+    else FLAG_CLEAR(FLAG_CARRY);
+
+    FLAG_CLEAR(FLAG_HALF | FLAG_SUB);
+    return res;
+}
+
+uint8_t srl(cpu_t cpu, uint8_t val) {
+    uint8_t res = val >> 1;
+
+    if(res == 0) FLAG_SET(FLAG_ZERO);
+    else FLAG_CLEAR(FLAG_ZERO);
+
+    if(val & 0x1) FLAG_SET(FLAG_CARRY);
+    else FLAG_CLEAR(FLAG_CARRY);
+
+    FLAG_CLEAR(FLAG_HALF | FLAG_SUB);
+    return res;
 }
 
 #define DEFINE_FUNC(ret, val1) \
@@ -992,4 +1116,275 @@ void ret_nz(cpu_t cpu) {
     cpu->registers.pc = pop(cpu);
 }
 
-
+void cb_val(cpu_t cpu, uint8_t val) {
+    uint8_t tmp;
+    switch(val & 0xf0) {
+    case 0x00:
+        switch (val & 0x0f) {
+        case 0x0:
+            cpu->registers.b = rlc(cpu, cpu->registers.b);
+            break;
+        case 0x1:
+            cpu->registers.c = rlc(cpu, cpu->registers.c);
+            break;
+        case 0x2:
+            cpu->registers.d = rlc(cpu, cpu->registers.d);
+            break;
+        case 0x3:
+            cpu->registers.e = rlc(cpu, cpu->registers.e);
+            break;
+        case 0x4:
+            cpu->registers.h = rlc(cpu, cpu->registers.h);
+            break;
+        case 0x5:
+            cpu->registers.h = rlc(cpu, cpu->registers.h);
+            break;
+        case 0x6: {
+            tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
+            tmp = rlc(cpu, val);
+            memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
+            break;
+          }
+        case 0x7:
+            rlca(cpu);
+            break;
+        case 0x8:
+            cpu->registers.b = rrc(cpu, cpu->registers.b);
+            break;
+        case 0x9:
+            cpu->registers.c = rrc(cpu, cpu->registers.c);
+            break;
+        case 0xa:
+            cpu->registers.d = rrc(cpu, cpu->registers.d);
+            break;
+        case 0xb:
+            cpu->registers.e = rrc(cpu, cpu->registers.e);
+            break;
+        case 0xc:
+            cpu->registers.h = rrc(cpu, cpu->registers.h);
+            break;
+        case 0xd:
+            cpu->registers.l = rrc(cpu, cpu->registers.l);
+            break;
+        case 0xe: {
+            tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
+            tmp = rrc(cpu, val);
+            memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
+            break;
+          }
+        case 0xf:
+            rrca(cpu);
+            break;
+        }
+        break;
+    case 0x10:
+        switch (val & 0x0f) {
+        case 0x0:
+            cpu->registers.b = rl(cpu, cpu->registers.b);
+            break;
+        case 0x1:
+            cpu->registers.c = rl(cpu, cpu->registers.c);
+            break;
+        case 0x2:
+            cpu->registers.d = rl(cpu, cpu->registers.d);
+            break;
+        case 0x3:
+            cpu->registers.e = rl(cpu, cpu->registers.e);
+            break;
+        case 0x4:
+            cpu->registers.h = rl(cpu, cpu->registers.h);
+            break;
+        case 0x5:
+            cpu->registers.h = rl(cpu, cpu->registers.h);
+            break;
+        case 0x6: {
+            tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
+            tmp = rl(cpu, val);
+            memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
+            break;
+          }
+        case 0x7:
+            rla(cpu);
+            break;
+        case 0x8:
+            cpu->registers.b = rr(cpu, cpu->registers.b);
+            break;
+        case 0x9:
+            cpu->registers.c = rr(cpu, cpu->registers.c);
+            break;
+        case 0xa:
+            cpu->registers.d = rr(cpu, cpu->registers.d);
+            break;
+        case 0xb:
+            cpu->registers.e = rr(cpu, cpu->registers.e);
+            break;
+        case 0xc:
+            cpu->registers.h = rr(cpu, cpu->registers.h);
+            break;
+        case 0xd:
+            cpu->registers.l = rr(cpu, cpu->registers.l);
+            break;
+        case 0xe: {
+            tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
+            tmp = rr(cpu, val);
+            memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
+            break;
+          }
+        case 0xf:
+            rra(cpu);
+            break;
+        }
+        break;
+    case 0x20:
+        switch (val & 0x0f) {
+        case 0x0:
+            cpu->registers.b = sla(cpu, cpu->registers.b);
+            break;
+        case 0x1:
+            cpu->registers.c = sla(cpu, cpu->registers.c);
+            break;
+        case 0x2:
+            cpu->registers.d = sla(cpu, cpu->registers.d);
+            break;
+        case 0x3:
+            cpu->registers.e = sla(cpu, cpu->registers.e);
+            break;
+        case 0x4:
+            cpu->registers.h = sla(cpu, cpu->registers.h);
+            break;
+        case 0x5:
+            cpu->registers.h = sla(cpu, cpu->registers.h);
+            break;
+        case 0x6: {
+            tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
+            tmp = sla(cpu, val);
+            memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
+            break;
+          }
+        case 0x7:
+            cpu->registers.a = sla(cpu, cpu->registers.a);
+            break;
+        case 0x8:
+            cpu->registers.b = sra(cpu, cpu->registers.b);
+            break;
+        case 0x9:
+            cpu->registers.c = sra(cpu, cpu->registers.c);
+            break;
+        case 0xa:
+            cpu->registers.d = sra(cpu, cpu->registers.d);
+            break;
+        case 0xb:
+            cpu->registers.e = sra(cpu, cpu->registers.e);
+            break;
+        case 0xc:
+            cpu->registers.h = sra(cpu, cpu->registers.h);
+            break;
+        case 0xd:
+            cpu->registers.l = sra(cpu, cpu->registers.l);
+            break;
+        case 0xe: {
+            tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
+            tmp = sra(cpu, val);
+            memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
+            break;
+          }
+        case 0xf:
+            cpu->registers.a = sra(cpu, cpu->registers.a);
+            break;
+        }
+        break;
+    case 0x30:
+        switch (val & 0x0f) {
+        case 0x0:
+            cpu->registers.b = swap(cpu, cpu->registers.b);
+            break;
+        case 0x1:
+            cpu->registers.c = swap(cpu, cpu->registers.c);
+            break;
+        case 0x2:
+            cpu->registers.d = swap(cpu, cpu->registers.d);
+            break;
+        case 0x3:
+            cpu->registers.e = swap(cpu, cpu->registers.e);
+            break;
+        case 0x4:
+            cpu->registers.h = swap(cpu, cpu->registers.h);
+            break;
+        case 0x5:
+            cpu->registers.h = swap(cpu, cpu->registers.h);
+            break;
+        case 0x6: {
+            tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
+            tmp = swap(cpu, val);
+            memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
+            break;
+          }
+        case 0x7:
+            cpu->registers.a = swap(cpu, cpu->registers.a);
+            break;
+        case 0x8:
+            cpu->registers.b = srl(cpu, cpu->registers.b);
+            break;
+        case 0x9:
+            cpu->registers.c = srl(cpu, cpu->registers.c);
+            break;
+        case 0xa:
+            cpu->registers.d = srl(cpu, cpu->registers.d);
+            break;
+        case 0xb:
+            cpu->registers.e = srl(cpu, cpu->registers.e);
+            break;
+        case 0xc:
+            cpu->registers.h = srl(cpu, cpu->registers.h);
+            break;
+        case 0xd:
+            cpu->registers.l = srl(cpu, cpu->registers.l);
+            break;
+        case 0xe: {
+            tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
+            tmp = srl(cpu, val);
+            memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
+            break;
+          }
+        case 0xf:
+            cpu->registers.a = srl(cpu, cpu->registers.a);
+            break;
+        }
+        break;
+    case 0x40:
+        switch (val & 0x0f) {
+        case 0x0:
+            cpu->registers.b = swap(cpu, cpu->registers.b);
+            break;
+        case 0x1:
+            cpu->registers.c = swap(cpu, cpu->registers.c);
+            break;
+        case 0x2:
+            cpu->registers.d = swap(cpu, cpu->registers.d);
+            break;
+        case 0x3:
+            cpu->registers.e = swap(cpu, cpu->registers.e);
+            break;
+        case 0x4:
+            cpu->registers.h = swap(cpu, cpu->registers.h);
+            break;
+        case 0x5:
+            cpu->registers.h = swap(cpu, cpu->registers.h);
+            break;
+        case 0x6: {
+            tmp = memoryReadByte(cpu->memory, cpu->registers.hl);
+            tmp = swap(cpu, val);
+            memoryWriteByte(cpu->memory, cpu->registers.hl, tmp);
+            break;
+          }
+        case 0x7:
+            cpu->registers.a = swap(cpu, cpu->registers.a);
+            break;
+        }
+        break;
+    case 0xC0:
+        break;
+    default:
+        break;
+    }
+}
