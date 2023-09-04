@@ -11,8 +11,8 @@ Another Gameboy emulator in C.
         - [X] AND, OR, XOR
         - [X] JP, JR, CALL
         - [X] PUSH, POP, RST
-        - [ ] RET
-        - [ ] CB 0x%04x (instructions with CB opcode)
+        - [X] RET
+        - [X] CB 0x%02x (instructions with CB opcode)
         - [ ] Interrupt based instructions
     - [ ] Enabling simulation
 - [ ] Memory
@@ -21,8 +21,10 @@ Another Gameboy emulator in C.
     - [ ] Managing MBC
     - [X] Implementing basic memory functionality (read from/write to memory)
 - [ ] Output video
+- [ ] Interrupt support
 
 ## Resources
+- [Writing a gameboy emulator, Cinoop](https://cturt.github.io/cinoop.html)
 - [Let's write a game boy emulator in python](https://www.inspiredpython.com/course/game-boy-emulator/let-s-write-a-game-boy-emulator-in-python)
 - [Gameboy development website](https://gbdev.io/)
 - [Gameboy CPU Manual](http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf)
