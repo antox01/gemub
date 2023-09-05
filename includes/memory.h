@@ -8,6 +8,11 @@
 #define EXTERNAL_RAM_OFFSET 0xa000
 #define WORK_RAM_OFFSET 0xc000
 #define ECHO_RAM_OFFSET 0xe000
+#define OAM_OFFSET 0xfe00
+#define UNUSABLE_OFFSET 0xfea0
+#define IO_OFFSET 0xff00
+#define HIGH_RAM_OFFSET 0xff80
+#define INTERRUPT_OFFSET 0xffff
 
 typedef struct memory_s *memory_t;
 
