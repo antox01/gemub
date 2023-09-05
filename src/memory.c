@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+//#include "../includes/interrupt.h"
 #include "../includes/memory.h"
 #include "../includes/rom.h"
 
@@ -14,7 +15,7 @@ struct memory_s {
     uint8_t *oam;
     uint8_t *highRam;
 
-    uint8_t ime;
+    interrupt_t interrupt;
 };
 
 memory_t initMemory(FILE *fin) {
@@ -54,10 +55,14 @@ void freeMemory(memory_t memory) {
 uint8_t memoryReadByte(memory_t memory, uint16_t address) {
     if (address == INTERRUPT_OFFSET) {
         //fprintf(stderr, "Interrupt: Not implemented\n");
-        return memory->ime;
+        return interruptGetEnable(memory->interrupt);
     }
     if (address >= HIGH_RAM_OFFSET) {
         return memory->highRam[address - HIGH_RAM_OFFSET];
+    }
+    if (address >= IO_OFFSET) {
+        fprintf(stderr, "Not implemented\n");
+        return 0x0;
     }
     if (address >= UNUSABLE_OFFSET) {
         fprintf(stderr, "Forbidden offset\n");
@@ -91,7 +96,22 @@ uint16_t memoryReadWord(memory_t memory, uint16_t address) {
 void memoryWriteByte(memory_t memory, uint16_t address, uint8_t value) {
     if (address == INTERRUPT_OFFSET) {
         fprintf(stderr, "Interrupt: Not implemented\n");
-        memory->ime = value;
+        interruptSetEnable(memory->interrupt, value);
+        return;
+    }
+    if (address >= HIGH_RAM_OFFSET) {
+        memory->highRam[address - HIGH_RAM_OFFSET] = value;
+    }
+    if (address >= IO_OFFSET) {
+        fprintf(stderr, "Not implemented\n");
+        return;
+    }
+    if (address >= UNUSABLE_OFFSET) {
+        fprintf(stderr, "Forbidden offset\n");
+        return;
+    }
+    if (address >= OAM_OFFSET) {
+        memory->oam[address - OAM_OFFSET] = value;
         return;
     }
     if (address >= ECHO_RAM_OFFSET) {
@@ -140,4 +160,8 @@ uint8_t memoryHasAddress(memory_t memory, uint16_t address) {
 
 void memoryDumpRom(memory_t memory) {
     romDump(memory->rom);
+}
+
+void memorySetInterrupt(memory_t memory, interrupt_t interrupt) {
+    memory->interrupt = interrupt;
 }

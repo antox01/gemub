@@ -8,7 +8,7 @@ HEADERS_PATH=./includes
 IFLAGS=-I$(PATH_INCLUDE) -I$(HEADERS_PATH)
 CFLAGS=-L$(PATH_LIB) -lSDL2
 
-OUT_FILES = out/cpu.o out/rom.o out/memory.o
+OUT_FILES = out/cpu.o out/rom.o out/memory.o out/interrupt.o
 
 gemub: setup $(OUT_FILES)
 	$(CC) -g -fsanitize=address -o out/gemub src/main.c $(OUT_FILES) $(IFLAGS) $(CFLAGS)
@@ -21,6 +21,9 @@ out/rom.o: ./includes/rom.h ./src/rom.c
 
 out/memory.o: ./includes/memory.h ./src/memory.c
 	$(CC) -g -fsanitize=address -c -o out/memory.o src/memory.c
+
+out/interrupt.o: ./includes/interrupt.h ./src/interrupt.c
+	$(CC) -g -fsanitize=address -c -o out/interrupt.o src/interrupt.c
 
 setup:
 	[ -d "./out" ] || mkdir out

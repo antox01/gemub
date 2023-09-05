@@ -46,6 +46,7 @@ typedef struct {
 struct cpu_s {
     registers_t registers;
     memory_t memory;
+    interrupt_t interrupt;
 };
 
 
@@ -253,7 +254,7 @@ const instruction_t instructions[256] = {
 	{ "RET Z",                      0, ret_z},                       // 0xc8
 	{ "RET",                        0, ret},                           // 0xc9
 	{ "JP Z, 0x%04X",               2, jp_z_val},              // 0xca
-	{ "CB %02X",                    1, NULL},                      // 0xcb
+	{ "CB %02X",                    1, cb_val},                      // 0xcb
 	{ "CALL Z, 0x%04X",             2, call_z_val},          // 0xcc
 	{ "CALL 0x%04X",                2, call_val},               // 0xcd
 	{ "ADC 0x%02X",                 1, adc_a_val},                  // 0xce
@@ -267,7 +268,7 @@ const instruction_t instructions[256] = {
 	{ "SUB 0x%02X",                 1, sub_val},                  // 0xd6
 	{ "RST 0x10",                   0, rst_0x10},                   // 0xd7
 	{ "RET C",                      0, ret_c},                       // 0xd8
-	{ "RETI",                       0, NULL},          // 0xd9
+	{ "RETI",                       0, reti},          // 0xd9
 	{ "JP C, 0x%04X",               2, jp_c_val},              // 0xda
 	{ "UNKNOWN",                    0, unknown},                 // 0xdb
 	{ "CALL C, 0x%04X",             2, call_c_val},          // 0xdc
@@ -293,7 +294,7 @@ const instruction_t instructions[256] = {
 	{ "LD A, (0xFF00 + 0x%02X)",    1, ld_a_add8},// 0xf0
 	{ "POP AF",                     0, pop_af},                     // 0xf1
 	{ "LD A, (0xFF00 + C)",         0, ld_a_cp},      // 0xf2
-	{ "DI",                         0, NULL},                        // 0xf3
+	{ "DI",                         0, di},                        // 0xf3
 	{ "UNKNOWN",                    0, unknown},                 // 0xf4
 	{ "PUSH AF",                    0, push_af},                   // 0xf5
 	{ "OR 0x%02X",                  1, or_val},                    // 0xf6
@@ -301,16 +302,17 @@ const instruction_t instructions[256] = {
 	{ "LD HL, SP+0x%02X",           1, ld_hl_spn},       // 0xf8
 	{ "LD SP, HL",                  0, ld_sp_hl},                // 0xf9
 	{ "LD A, (0x%04X)",             2, ld_a_add16},           // 0xfa
-	{ "EI",                         0, NULL},                             // 0xfb
+	{ "EI",                         0, ei},                             // 0xfb
 	{ "UNKNOWN",                    0, unknown},                 // 0xfc
 	{ "UNKNOWN",                    0, unknown},                 // 0xfd
 	{ "CP 0x%02X",                  1, cp_val},                    // 0xfe
 	{ "RST 0x38",                   0, rst_0x38},               // 0xff
 };
 
-cpu_t initCpu(memory_t memory) {
+cpu_t initCpu(memory_t memory, interrupt_t interrupt) {
     cpu_t cpu = (cpu_t) malloc(sizeof(*cpu));
     cpu->memory = memory;
+    cpu->interrupt = interrupt;
     cpu->registers.pc = CPU_START_ADDRESS;
     return cpu;
 }
@@ -1467,4 +1469,22 @@ void cb_val(cpu_t cpu, uint8_t val) {
             break;
         }
     }
+}
+
+void reti(cpu_t cpu) {
+    interruptEnable(cpu->interrupt);
+    cpu->registers.pc = pop(cpu);
+}
+
+void ei(cpu_t cpu) {
+    interruptEnable(cpu->interrupt);
+}
+
+void di(cpu_t cpu) {
+    interruptDisable(cpu->interrupt);
+}
+
+void cpuInt(cpu_t cpu, uint16_t address) {
+    push(cpu, cpu->registers.pc);
+    cpu->registers.pc = address;
 }

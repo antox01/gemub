@@ -1,6 +1,7 @@
 #ifndef MEMORY_DEF_H
 #define MEMORY_DEF_H
 
+#include "interrupt.h"
 #include <stdint.h>
 #include <stdio.h>
 
@@ -24,5 +25,7 @@ void memoryWriteByte(memory_t memory, uint16_t address, uint8_t value);
 void memoryWriteWord(memory_t memory, uint16_t address, uint16_t value);
 uint8_t memoryHasAddress(memory_t memory, uint16_t address);
 void memoryDumpRom(memory_t memory);
+
+void memorySetInterrupt(memory_t memory, interrupt_t interrupt);
 
 #endif

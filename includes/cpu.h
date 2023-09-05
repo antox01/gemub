@@ -2,6 +2,7 @@
 #define CPU_DEF_H
 
 #include "memory.h"
+#include "interrupt.h"
 enum flag_e {
     FLAG_CARRY = 1 << 4,
     FLAG_HALF = 1 << 5,
@@ -311,11 +312,15 @@ void ret_nz(cpu_t cpu);
 
 void cb_val(cpu_t cpu, uint8_t val);
 
+void reti(cpu_t cpu);
+void ei(cpu_t cpu);
+void di(cpu_t cpu);
+
 void unknown(cpu_t cpu);
 
 /* Function to allocate a new cpu.
  */
-cpu_t initCpu(memory_t memory);
+cpu_t initCpu(memory_t memory, interrupt_t interrupt);
 
 /* Function that free all the allocated memory for the CPU.
  * Does not free the memory passed at the init function.
@@ -325,5 +330,7 @@ char cpuOperandSize(unsigned char opcode);
 void cpuPrintInstruction(uint16_t address, unsigned char opcode, unsigned short operand);
 
 uint8_t cpuStep(cpu_t cpu);
+void cpuInt(cpu_t cpu, uint16_t address);
+void cpuSetInterrupt(cpu_t cpu, interrupt_t interrupt);
 
 #endif
